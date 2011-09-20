@@ -1,0 +1,41 @@
+Andrew Kessel
+CSCI 5229 Homework 2 (Lorenz Attractor)
+9/15/2011
+
+Time to complete: ~10 hours (~3 hours of it just debugging the gradient coloring)
+
+General usage:
+
+Parameter manipulation:
+"q" - increase sigma by 5%
+"a" - decrease sigma by 5%
+"w" - increase beta by 5%
+"s" - decrease beta by 5%
+"e" - increase rho by 5%
+"d" - decrease rho by 5%
+
+The physical layout of these keys on the keyboard looks like this:
+
+		 |	s b r
+		 |	i e h
+		 |	g t o
+		 |	m a
+		 |	a
+-----------------
+increase |	q w e
+decrease |	a s d
+
+View controls:
+up, down, left, right arrows - move the viewing angle around
+"+" - Increase w by 0.1 (zoom out)
+"-" - Decrease w by 0.1 (zoom in)
+
+Coloring mode:
+"1" - Solid color
+"2" - Ordered (points are colored in order along the rgb color spectrum)
+"3" - Density (red points are closer together, blue points are farther apart)
+"4" - Gradient (red points are part of a higher curvature area, blue points are low curvature)
+
+Notes:
+- The algorithms to transform from HSV to RGB color space and back (in kutils.h) were taken from http://www.cs.rit.edu/~ncs/color/t_convert.html
+- The gradient coloring is not working properly. The coloring of a particular point in this mode is based solely on the angle made by the vectors going from that point to its two neighbors. By this way we're trying to capture the curvature of the area of the line on which this point lies. This does not work properly, however, because points with closer neighbors will see a larger angle (lower curvature) than points with further neighbors, even if they lie on a line with the same overall curvature. Therefore a more sophisticated technique needs to be employed in order to determine the gradient associated with a point. This was beyond the scope of the assignment, however, and was starting to add significant time to the project, so it was abandoned. It should be easy to implement once a technique is found, however, by simply modifying the logic in the function lorenz::calculate_gradient.

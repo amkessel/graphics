@@ -1,0 +1,18 @@
+1. Results for fps tests (note that I did a couple extra, which I will explain later):
+
+1x1:				718 fps
+300x300:		726 fps
+fullscreen:	835 fps
+
+1x1 w/ mouse:					675 fps
+300x300 w/ mouse:			673 fps
+fullscreen w/ mouse:	670 fps
+
+
+I would think that the smaller the window, the higher the framerate since the graphics card would not have to calculate as many pixel values. What I found was counterintuitive, though, with higher framerates for larger windows. Why this would be, I'm not sure. I think my graphics card (NVS 4200) is probably beefy enough for it to perform very well at all resolutions for such a simple application. Perhaps, then, a greater factor is the data transfer between the CPU and GPU (a bottleneck that I learned about studying and writing CUDA programs). I wouldn't think that the actual transfer would be a factor, again because this is such a small application, but perhaps it's more of a OS scheduling issue in that the CPU is busy doing other things (processes), which might be affecting how timely the data transfer is to the GPU. To test this, I tried moving my mouse drastically around the screen while gears was running. The results that I got do in fact show a decreased performance, which may be attributed to keeping the CPU busy with even such a trivial task as redrawing the cursor. Extrapolating this out, then, perhaps the smaller windows meant that the CPU had to redraw more of whatever was behind the running application, thus reducing the framerate of the gears.
+
+Another piece of evidence that OS scheduling had more of a factor than anything else was the fact that I saw quite a bit of fluctuation of the framerates within each test. For example, during the 1x1 w/ mouse test, while the application mostly stayed around 600-650 fps, at one point it spiked up to 925 fps. The only reasonable explanation for this is that the OS suddenly had more cycles to devote to the application due to some lull in scheduled processes.
+
+2. I did not see that kind of fluctuation in my fps results, though I would think that if they occurred I would also attribute it to OS scheduling peculiarities. When the OS suddenly needs to task out cycles to more processes, then the framerate of the application will suffer. I would think this is particularly true of systems that perform software rendering. As I said, I think my system, with an Intel Core i5 and Nvidia NVS 4200M, is beefy enough to handle this when I don't have many large applications running in the background.
+
+3. Time to complete this assignment: ~1 
