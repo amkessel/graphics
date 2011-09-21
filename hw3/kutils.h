@@ -16,64 +16,48 @@
 #include <stdlib.h>
 #include <stdarg.h>
 
-#include <GL/glut.h>
 #include <math.h>
 
-/***********************************
- ***********************************
+/*********************************************************************
+ *********************************************************************
  * MACROS
- ***********************************
- ***********************************/
+ *********************************************************************
+ *********************************************************************/
  
+#define PI 3.1415927
+
 #define KUTIL_MIN2(A,B) (A < B) ? A : B
 #define KUTIL_MAX2(A,B) (A >= B) ? A : B
 
-#define PI 3.14159
+#define KUTIL_COS(x) (cos((x)*PI/180))
+#define KUTIL_SIN(x) (sin((x)*PI/180))
 
-/***********************************
- ***********************************
+/*********************************************************************
+ *********************************************************************
  * DECLARATIONS
- ***********************************
- ***********************************/
+ *********************************************************************
+ *********************************************************************/
  
 namespace kutils
-{
-	typedef struct double_s
-	{
-		double x,y,z;
-	} double_t;
-	
-	typedef struct triple_s
-	{
-		double x,y,z;
-	} triple_t;
+{	
+	/*******************************
+	 * Classes and structs
+	 *******************************/
 
 	typedef struct point2_s
 	{
-		double_t;
+		double x,y;
 	} point2_t;
 
 	typedef struct point3_s
 	{
-		triple_t;
+		double x,y,z;
 	} point3_t;
 
-	/* Convenience routine to output raster text
-	   Use VARARGS to make this more flexible */
-	void Print(const char* format , ...);
-	
-	/* Calculates on the target number line the value based on a source number line  
-	   e.g. if val = 5 on a scale of 0 to 100, then val = 0.5 on a scale of 0 to 10 */
-	double Transform_Scale(double minSrc, double maxSrc, double minTgt, double maxTgt, double val);
-
-	/* Converts RGB to HSV color */
-	void RGBtoHSV( double r, double g, double b, double *h, double *s, double *v );
-	
-	/* Converts HSV to RGB color */
-	void HSVtoRGB( double *r, double *g, double *b, double h, double s, double v );
-	
-	/* Inverts the hue value (e.g. a hue of 90 will be inverted to 270) */
-	double InvertHue(double hue);
+	typedef struct point4_s
+	{
+		double x,y,z,w;
+	} point4_t;
 	
 	/* Class that represents a 3d vector */
 	class Vector3
@@ -112,75 +96,62 @@ namespace kutils
 	};
 	
 	/*******************************
-	 * OpenGL drawing functions
+	 * Generic functions
 	 *******************************/
-
-	/* Draws the xyz axes on the display */
-	void DrawAxes(float r, float g, float b, float len);
 	
-	/* Draws a 3D rectangle of dimensions (l,w,h), translated from the origin,
-	   scaled and rotated (th) radians */
-	void DrawRect3d(double l, double w, double h,
-					triple_t translation, triple_t scale, triple_t rotation, double th);
+	/* Calculates on the target number line the value based on a source number line  
+	   e.g. if val = 5 on a scale of 0 to 100, then val = 0.5 on a scale of 0 to 10 */
+	double Transform_Scale(double minSrc, double maxSrc, double minTgt, double maxTgt, double val);
+
+	/* Converts RGB to HSV color */
+	void RGBtoHSV( double r, double g, double b, double *h, double *s, double *v );
+	
+	/* Converts HSV to RGB color */
+	void HSVtoRGB( double *r, double *g, double *b, double h, double s, double v );
+	
+	/* Inverts the hue value (e.g. a hue of 90 will be inverted to 270) */
+	double InvertHue(double hue);
+	
+	/* Computes the points on a circle of radius r */
+	void ComputeCirclePoints(double r, point2_t *points, int n);
+	
+	void ComputeArchPoints(double r, double degrees, point2_t *points, int n);
 }
 
-/***********************************
- ***********************************
+/*********************************************************************
+ *********************************************************************
  * IMPLEMENTATIONS
- ***********************************
- ***********************************/
+ *********************************************************************
+ *********************************************************************/
  
-void DrawRect3d(double l, double w, double h, triple_t color
-				triple_t translation, triple_t scale, triple_t rotation, double th)
+void kutils::ComputeArchPoints(double r, double degrees, point2_t *points, int n)
 {
-   //  Save transformation
-   glPushMatrix();
-   //  Offset
-   glTranslated(translation.x, translation.y, translation.z);
-   glRotated(th, rotation.x, rotation.y, rotation.z);
-   glScaled(scale.x, scale.y, scale.z);
-   //  Cube
-   glBegin(GL_QUADS);
-   //  Front
-   glColor3f(1,0,0);
-   glVertex3f(-1,-1, 1);
-   glVertex3f(+1,-1, 1);
-   glVertex3f(+1,+1, 1);
-   glVertex3f(-1,+1, 1);
-   //  Back
-   glColor3f(0,0,1);
-   glVertex3f(+1,-1,-1);
-   glVertex3f(-1,-1,-1);
-   glVertex3f(-1,+1,-1);
-   glVertex3f(+1,+1,-1);
-   //  Right
-   glColor3f(1,1,0);
-   glVertex3f(+1,-1,+1);
-   glVertex3f(+1,-1,-1);
-   glVertex3f(+1,+1,-1);
-   glVertex3f(+1,+1,+1);
-   //  Left
-   glColor3f(0,1,0);
-   glVertex3f(-1,-1,-1);
-   glVertex3f(-1,-1,+1);
-   glVertex3f(-1,+1,+1);
-   glVertex3f(-1,+1,-1);
-   //  Top
-   glColor3f(0,1,1);
-   glVertex3f(-1,+1,+1);
-   glVertex3f(+1,+1,+1);
-   glVertex3f(+1,+1,-1);
-   glVertex3f(-1,+1,-1);
-   //  Bottom
-   glColor3f(1,0,1);
-   glVertex3f(-1,-1,-1);
-   glVertex3f(+1,-1,-1);
-   glVertex3f(+1,-1,+1);
-   glVertex3f(-1,-1,+1);
-   //  End
-   glEnd();
-   //  Undo transofrmations
-   glPopMatrix();
+	// compute the points using the parametric equations
+	// x = a + r*cos(t)
+	// y = b + r*sin(t)
+	// where (a,b) is the origin of the circle, (0,0) for our purposes
+
+	double dt = degrees / (n-1);
+	
+	for(int i = 0; i < n; i++)
+	{
+		points[i].x = r * KUTIL_COS(dt * i);
+		points[i].y = r * KUTIL_SIN(dt * i);
+	}
+}
+
+void kutils::ComputeCirclePoints(double r, kutils::point2_t *points, int n)
+{
+	if(n < 3)
+	{
+		throw "kutils ComputeCirclePoints: Not enough points to draw circle";
+	}
+	
+	kutils::ComputeArchPoints(r, 360, points, n-1);
+	
+	// make the last point the same as the first
+	points[n-1].x = points[0].x;
+	points[n-1].y = points[0].y;
 }
  
 kutils::Vector3::Vector3(double x, double y, double z)
@@ -338,42 +309,6 @@ double kutils::InvertHue(double hue)
 double kutils::Transform_Scale(double minSrc, double maxSrc, double minTgt, double maxTgt, double val)
 {
 	return minTgt + (maxTgt - minTgt) * (val - minSrc) / (maxSrc - minSrc);
-}
-
-void kutils::DrawAxes(float r=1, float g=1, float b=1, float len=1)
-{
-	//  Draw axes in white
-	glColor3f(r,g,b);
-	glBegin(GL_LINES);
-	glVertex3d(0,0,0);
-	glVertex3d(len,0,0);
-	glVertex3d(0,0,0);
-	glVertex3d(0,len,0);
-	glVertex3d(0,0,0);
-	glVertex3d(0,0,len);
-	glEnd();
-	//  Label axes
-	glRasterPos3d(len,0,0);
-	Print("X");
-	glRasterPos3d(0,len,0);
-	Print("Y");
-	glRasterPos3d(0,0,len);
-	Print("Z");
-}
-
-#define KUTILS_LEN 8192  // Maximum length of text string
-void kutils::Print(const char* format , ...)
-{
-   char    buf[KUTILS_LEN];
-   char*   ch=buf;
-   va_list args;
-   //  Turn the parameters into a character string
-   va_start(args,format);
-   vsnprintf(buf,KUTILS_LEN,format,args);
-   va_end(args);
-   //  Display the characters one at a time at the current raster position
-   while (*ch)
-      glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18,*ch++);
 }
 
 #endif

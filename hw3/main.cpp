@@ -11,11 +11,10 @@
 #include <math.h>
 //  OpenGL with prototypes for glext
 #define GL_GLEXT_PROTOTYPES
-#ifdef __APPLE__
-#include <GLUT/glut.h>
-#else
 #include <GL/glut.h>
-#endif
+
+#include "kutils.h"
+#include "kdraw.h"
 
 int th=0;         //  Azimuth of view angle
 int ph=0;         //  Elevation of view angle
@@ -27,80 +26,26 @@ int mode=0;       //  What to display
 #define Cos(x) (cos((x)*3.1415927/180))
 #define Sin(x) (sin((x)*3.1415927/180))
 
-/*
- *  Draw a cube
- *     at (x,y,z)
- *     dimentions (dx,dy,dz)
- *     rotated th about the y axis
- */
-static void cube(double x,double y,double z,
-                 double dx,double dy,double dz,
-                 double th)
-{
-   //  Save transformation
-   glPushMatrix();
-   //  Offset
-   glTranslated(x,y,z);
-   glRotated(th,0,1,0);
-   glScaled(dx,dy,dz);
-   //  Cube
-   glBegin(GL_QUADS);
-   //  Front
-   glColor3f(1,0,0);
-   glVertex3f(-1,-1, 1);
-   glVertex3f(+1,-1, 1);
-   glVertex3f(+1,+1, 1);
-   glVertex3f(-1,+1, 1);
-   //  Back
-   glColor3f(0,0,1);
-   glVertex3f(+1,-1,-1);
-   glVertex3f(-1,-1,-1);
-   glVertex3f(-1,+1,-1);
-   glVertex3f(+1,+1,-1);
-   //  Right
-   glColor3f(1,1,0);
-   glVertex3f(+1,-1,+1);
-   glVertex3f(+1,-1,-1);
-   glVertex3f(+1,+1,-1);
-   glVertex3f(+1,+1,+1);
-   //  Left
-   glColor3f(0,1,0);
-   glVertex3f(-1,-1,-1);
-   glVertex3f(-1,-1,+1);
-   glVertex3f(-1,+1,+1);
-   glVertex3f(-1,+1,-1);
-   //  Top
-   glColor3f(0,1,1);
-   glVertex3f(-1,+1,+1);
-   glVertex3f(+1,+1,+1);
-   glVertex3f(+1,+1,-1);
-   glVertex3f(-1,+1,-1);
-   //  Bottom
-   glColor3f(1,0,1);
-   glVertex3f(-1,-1,-1);
-   glVertex3f(+1,-1,-1);
-   glVertex3f(+1,-1,+1);
-   glVertex3f(-1,-1,+1);
-   //  End
-   glEnd();
-   //  Undo transofrmations
-   glPopMatrix();
-}
+using namespace kutils;
+using namespace kdraw;
 
 /*
  *  Draw vertex in polar coordinates
  */
+ /*
 static void Vertex(double th,double ph)
 {
    glColor3f(Cos(th)*Cos(th) , Sin(ph)*Sin(ph) , Sin(th)*Sin(th));
    glVertex3d(Sin(th)*Cos(ph) , Sin(ph) , Cos(th)*Cos(ph));
 }
+*/
 
 /*
  *  Draw a sphere (version 1)
  *     at (x,y,z)
  *     radius (r)
  */
+ /*
 static void sphere1(double x,double y,double z,double r)
 {
    const int d=5;
@@ -145,12 +90,14 @@ static void sphere1(double x,double y,double z,double r)
    //  Undo transformations
    glPopMatrix();
 }
+*/
 
 /*
  *  Draw a sphere (version 2)
  *     at (x,y,z)
  *     radius (r)
  */
+/*
 static void sphere2(double x,double y,double z,double r)
 {
    const int d=5;
@@ -177,189 +124,178 @@ static void sphere2(double x,double y,double z,double r)
    //  Undo transformations
    glPopMatrix();
 }
+*/		  
 
-/*
- *  Draw a airplane shaped polygon at (x,y,z)
- */
-static void PolyPlane(int type,double x,double y,double z)
+void Draw_H(point3_t translation, point4_t rotation, point3_t scale)
 {
-   //  Save transformation
-   glPushMatrix();
-   //  Offset
-   glTranslated(x,y,z);
-   //  Fuselage and wings
-   glColor3f(1,1,0); 
-   glBegin(type);
-   glVertex2f( 1.0, 0.0);
-   glVertex2f( 0.8, 0.1);
-   glVertex2f( 0.0, 0.1);
-   glVertex2f(-1.0, 0.5);
-   glVertex2f(-1.0,-0.5);
-   glVertex2f( 0.0,-0.1);
-   glVertex2f( 0.8,-0.1);
-   glEnd();
-   //  Vertical tail
-   glColor3f(1,0,0);
-   glBegin(type);
-   glVertex3f(-1.0, 0.0,0.0);
-   glVertex3f(-1.0, 0.0,0.5);
-   glVertex3f(-0.5, 0.0,0.0);
-   glEnd();
-   //  Undo transformations
-   glPopMatrix();
+	// Save transformation
+	glPushMatrix();
+	
+	// Offset
+	Transform(translation, rotation, scale);
+	
+	// build it up from three modified cubes
+	point3_t trans_left = {-0.4, 0, 0};
+	point3_t scale_left = {0.2, 1.5, 0.2};
+	point4_t rot_left = {0, 0, 0, 0};
+	
+	point3_t trans_mid = {0,0,0};
+	point3_t scale_mid = {0.6, 0.2, 0.2};
+	point4_t rot_mid = {0, 0, 0, 0};
+	
+	point3_t trans_right = {0.4, 0, 0};
+	point3_t scale_right = {0.2, 1.5, 0.2};
+	point4_t rot_right = {0, 0, 0, 0};
+	
+	Cube(trans_left, rot_left, scale_left);
+	Cube(trans_mid, rot_mid, scale_mid);
+	Cube(trans_right, rot_right, scale_right);
+	
+	// Undo transformations
+	glPopMatrix();
 }
 
-/*
- *  Draw a flat airplane at (x,y,z)
- */
-static void FlatPlane(double x,double y,double z)
+void Draw_O(point3_t translation, point4_t rotation, point3_t scale)
 {
-   //  Save transformation
-   glPushMatrix();
-   //  Offset
-   glRotated(-90,1,0,0);
-   glTranslated(x,y,z);
-   //  Fuselage
-   glColor3f(0,0,1);
-   glBegin(GL_POLYGON);
-   glVertex2f( 1.0, 0.0);
-   glVertex2f( 0.8, 0.1);
-   glVertex2f(-1.0, 0.1);
-   glVertex2f(-1.0,-0.1);
-   glVertex2f( 0.8,-0.1);
-   glEnd();
-   //  Wings
-   glColor3f(1,1,0);
-   glBegin(GL_TRIANGLES);
-   //  Starboard
-   glVertex2f( 0.0, 0.1);
-   glVertex2f(-1.0, 0.1);
-   glVertex2f(-1.0, 0.5);
-   //  Port
-   glVertex2f( 0.0,-0.1);
-   glVertex2f(-1.0,-0.1);
-   glVertex2f(-1.0,-0.5);
-   glEnd();
-   //  Vertical tail
-   glColor3f(1,0,0);
-   glBegin(GL_TRIANGLES);
-   glVertex3f(-1.0, 0.0,0.0);
-   glVertex3f(-1.0, 0.0,0.5);
-   glVertex3f(-0.5, 0.0,0.0);
-   glEnd();
-   //  Undo transformations
-   glPopMatrix();
+	// Save transformation
+	glPushMatrix();
+	
+	// Offset
+	Transform(translation, rotation, scale);
+	
+	// build it up from arches and cubes
+	point3_t trans_top = {0, 0.25, 0};
+	point3_t scale_top = {1, 1, 0.2};
+	point4_t rot_top = {0, 0, 0, 0};
+	
+	point3_t trans_bottom = {0, -0.25, 0};
+	point3_t scale_bottom = {1, 1, 0.2};
+	point4_t rot_bottom = {1, 0, 0, 180};
+	
+	point3_t trans_left = {-0.4, 0, 0};
+	point3_t scale_left = {0.2, 0.5, 0.2};
+	point4_t rot_left = {0, 0, 0, 0};
+	
+	point3_t trans_right = {0.4, 0, 0};
+	point3_t scale_right = {0.2, 0.5, 0.2};
+	point4_t rot_right = {0, 0, 0, 0};
+	
+	double r_outer = 0.5;
+	double r_inner = 0.3;
+	double degrees = 180;
+	int segs = 20;
+	
+	Arch(r_outer, r_inner, degrees, segs, trans_top, rot_top, scale_top, false);
+	Arch(r_outer, r_inner, degrees, segs, trans_bottom, rot_bottom, scale_bottom, false);
+	Cube(trans_left, rot_left, scale_left);
+	Cube(trans_right, rot_right, scale_right);
+	
+	// Undo transformations
+	glPopMatrix();
 }
 
-/*
- *  Draw solid airplane
- *    at (x,y,z)
- *    nose towards (dx,dy,dz)
- *    up towards (ux,uy,uz)
- */
-static void SolidPlane(double x,double y,double z,
-                       double dx,double dy,double dz,
-                       double ux,double uy, double uz)
+void Draw_L(point3_t translation, point4_t rotation, point3_t scale)
 {
-   // Dimensions used to size airplane
-   const double wid=0.05;
-   const double nose=+0.50;
-   const double cone= 0.20;
-   const double wing= 0.00;
-   const double strk=-0.20;
-   const double tail=-0.50;
-   //  Unit vector in direction of flght
-   double D0 = sqrt(dx*dx+dy*dy+dz*dz);
-   double X0 = dx/D0;
-   double Y0 = dy/D0;
-   double Z0 = dz/D0;
-   //  Unit vector in "up" direction
-   double D1 = sqrt(ux*ux+uy*uy+uz*uz);
-   double X1 = ux/D1;
-   double Y1 = uy/D1;
-   double Z1 = uz/D1;
-   //  Cross product gives the third vector
-   double X2 = Y0*Z1-Y1*Z0;
-   double Y2 = Z0*X1-Z1*X0;
-   double Z2 = X0*Y1-X1*Y0;
-   //  Rotation matrix
-   double mat[16];
-   mat[0] = X0;   mat[4] = X1;   mat[ 8] = X2;   mat[12] = 0;
-   mat[1] = Y0;   mat[5] = Y1;   mat[ 9] = Y2;   mat[13] = 0;
-   mat[2] = Z0;   mat[6] = Z1;   mat[10] = Z2;   mat[14] = 0;
-   mat[3] =  0;   mat[7] =  0;   mat[11] =  0;   mat[15] = 1;
+	// Save transformation
+	glPushMatrix();
+	
+	// Offset
+	Transform(translation, rotation, scale);
+	
+	// build it up from two modified cubes
+	point3_t trans_left = {-0.4, 0, 0};
+	point3_t scale_left = {0.2, 1.5, 0.2};
+	point4_t rot_left = {0,0,0,0};
+	
+	point3_t trans_bottom = {0, -0.65, 0};
+	point3_t scale_bottom = {1, 0.2, 0.2};
+	point4_t rot_bottom = {0,0,0,0};
+	
+	Cube(trans_left, rot_left, scale_left);
+	Cube(trans_bottom, rot_bottom, scale_bottom);
+	
+	// Undo transformations
+	glPopMatrix();
+}
 
-   //  Save current transforms
-   glPushMatrix();
-   //  Offset, scale and rotate
-   glTranslated(x,y,z);
-   glMultMatrixd(mat);
-   //  Nose (4 sided)
-   glColor3f(0,0,1);
-   glBegin(GL_TRIANGLES);
-   glVertex3d(nose, 0.0, 0.0);
-   glVertex3d(cone, wid, wid);
-   glVertex3d(cone,-wid, wid);
+void Draw_Y(point3_t translation, point4_t rotation, point3_t scale)
+{
+	// Save transformation
+	glPushMatrix();
+	
+	// Offset
+	Transform(translation, rotation, scale);
+	
+	// build it up from three modified cubes
+	point3_t trans_left = {-0.25, 0.5, 0};
+	point3_t scale_left = {0.707, 0.2, 0.2};
+	point4_t rot_left = {0, 0, 1, -45};
+	
+	point3_t trans_mid = {0, -0.15, 0};
+	point3_t scale_mid = {0.2, 0.8, 0.2};
+	point4_t rot_mid = {0, 0, 0, 0};
+	
+	point3_t trans_right = {0.25, 0.5, 0};
+	point3_t scale_right = {0.707, 0.2, 0.2};
+	point4_t rot_right = {0, 0, 1, 45};
+	
+	Cube(trans_left, rot_left, scale_left);
+	Cube(trans_mid, rot_mid, scale_mid);
+	Cube(trans_right, rot_right, scale_right);
+	
+	// Undo transformations
+	glPopMatrix();
+}
 
-   glVertex3d(nose, 0.0, 0.0);
-   glVertex3d(cone, wid,-wid);
-   glVertex3d(cone,-wid,-wid);
+void Draw_C(point3_t translation, point4_t rotation, point3_t scale)
+{
+	// Save transformation
+	glPushMatrix();
+	
+	// Offset
+	Transform(translation, rotation, scale);
+	
+	// build it up from arches and cubes
+	point3_t trans_top = {0, 0.25, 0};
+	point3_t scale_top = {1, 1, 0.2};
+	point4_t rot_top = {0, 0, 1, 25};
+	
+	point3_t trans_bottom = {0, -0.25, 0};
+	point3_t scale_bottom = {1, 1, 0.2};
+	point4_t rot_bottom1 = {1, 0, 0, 180};
+	point4_t rot_bottom2 = {0, 0, 1, 25};
+	
+	point3_t trans_bottoms[1] = { trans_bottom };
+	point3_t scale_bottoms[1] = { scale_bottom };
+	point4_t rot_bottoms[2] = { rot_bottom1, rot_bottom2 };
+	
+	point3_t trans_left = {-0.4, 0, 0};
+	point3_t scale_left = {0.2, 0.5, 0.2};
+	point4_t rot_left = {0, 0, 0, 0};
+	
+	double r_outer = 0.5;
+	double r_inner = 0.3;
+	double degrees = 155;
+	int segs = 20;
+	
+	Arch(r_outer, r_inner, degrees, segs, trans_top, rot_top, scale_top, false);
+	Arch(r_outer, r_inner, degrees, segs, trans_bottoms, rot_bottoms, scale_bottoms, 1, 2, 1, false);
+	Cube(trans_left, rot_left, scale_left);
+	
+	// Undo transformations
+	glPopMatrix();
+}
 
-   glVertex3d(nose, 0.0, 0.0);
-   glVertex3d(cone, wid, wid);
-   glVertex3d(cone, wid,-wid);
-
-   glVertex3d(nose, 0.0, 0.0);
-   glVertex3d(cone,-wid, wid);
-   glVertex3d(cone,-wid,-wid);
-   glEnd();
-   //  Fuselage (square tube)
-   glBegin(GL_QUADS);
-   glVertex3d(cone, wid, wid);
-   glVertex3d(cone,-wid, wid);
-   glVertex3d(tail,-wid, wid);
-   glVertex3d(tail, wid, wid);
-
-   glVertex3d(cone, wid,-wid);
-   glVertex3d(cone,-wid,-wid);
-   glVertex3d(tail,-wid,-wid);
-   glVertex3d(tail, wid,-wid);
-
-   glVertex3d(cone, wid, wid);
-   glVertex3d(cone, wid,-wid);
-   glVertex3d(tail, wid,-wid);
-   glVertex3d(tail, wid, wid);
-
-   glVertex3d(cone,-wid, wid);
-   glVertex3d(cone,-wid,-wid);
-   glVertex3d(tail,-wid,-wid);
-   glVertex3d(tail,-wid, wid);
-
-   glVertex3d(tail,-wid, wid);
-   glVertex3d(tail, wid, wid);
-   glVertex3d(tail, wid,-wid);
-   glVertex3d(tail,-wid,-wid);
-   glEnd();
-   //  Wings (plane triangles)
-   glColor3f(1,1,0);
-   glBegin(GL_TRIANGLES);
-   glVertex3d(wing, 0.0, wid);
-   glVertex3d(tail, 0.0, wid);
-   glVertex3d(tail, 0.0, 0.5);
-
-   glVertex3d(wing, 0.0,-wid);
-   glVertex3d(tail, 0.0,-wid);
-   glVertex3d(tail, 0.0,-0.5);
-   glEnd();
-   //  Vertical tail (plane triangle)
-   glColor3f(1,0,0);
-   glBegin(GL_POLYGON);
-   glVertex3d(strk, 0.0, 0.0);
-   glVertex3d(tail, 0.3, 0.0);
-   glVertex3d(tail, 0.0, 0.0);
-   glEnd();
-   //  Undo transformations
-   glPopMatrix();
+void Draw_W(point3_t translation, point4_t rotation, point3_t scale)
+{
+	// Save transformation
+	glPushMatrix();
+	
+	// Offset
+	Transform(translation, rotation, scale);
+	
+	// Undo transformations
+	glPopMatrix();
 }
 
 /*
@@ -367,7 +303,7 @@ static void SolidPlane(double x,double y,double z,
  */
 void display()
 {
-   const double len=1.5;  //  Length of axes
+//   const double len=1.5;  //  Length of axes
    //  Erase the window and the depth buffer
    glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
    //  Enable Z-buffering in OpenGL
@@ -378,7 +314,17 @@ void display()
    glRotatef(ph,1,0,0);
    glRotatef(th,0,1,0);
    //  Decide what to draw
-   switch (mode)
+   point3_t translation = {0, 0, 0};
+   point4_t rotation = {1, 0, 0, 0};
+   point3_t scale = {1, 1, 1};
+//   Cone(1.0, 20, translation, scale, rotation);
+//	Arch(1.0, 0.75, PI/4, 5, translation, scale, rotation, false);
+//	Draw_H(translation, rotation, scale);
+//	Draw_O(translation, rotation, scale);
+//	Draw_L(translation, rotation, scale);
+//	Draw_Y(translation, rotation, scale);
+	Draw_C(translation, rotation, scale);
+/*   switch (mode)
    {
       //  Draw cubes
       case 0:
@@ -450,6 +396,8 @@ void display()
       glRasterPos3d(0.0,0.0,len);
       Print("Z");
    }
+   */
+   DrawAxes(1,1,1,1.5);
    //  Five pixels from the lower left corner of the window
    glWindowPos2i(5,5);
    //  Print the text string
