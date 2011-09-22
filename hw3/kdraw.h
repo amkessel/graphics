@@ -4,8 +4,8 @@
  * Andrew Kessel (hence the "k" before "draw" :)
  * Created 9/21/2011
  *
- * General OpenGL definitions/implementations (in one package for easy portability)
- * specifically for CSCI 5229.
+ * General definitions/implementations (in one package for easy portability)
+ * for accessing OpenGL functionality, specifically for CSCI 5229.
  *
  ***************************************************/
  
@@ -30,6 +30,9 @@ namespace kdraw
 	
 	/* Draws the xyz axes on the display */
 	void DrawAxes(float r, float g, float b, float len);
+	
+	/* Performs the offset translations and scales */	
+	void Transform(point3_t *translations, point3_t *scales, int ntrans, int nscales);
 
 	/* Performs the offset translations, rotations and scales */	
 	void Transform(point3_t *translations, point4_t *rotations, point3_t *scales,
@@ -37,6 +40,9 @@ namespace kdraw
 				
 	/* Performs the offset translations, rotations and scales */	
 	void Transform(point3_t translation, point4_t rotation, point3_t scale);
+				
+	/* Performs the offset translations and scales */	
+	void Transform(point3_t translation, point3_t scale);
 	
 	/* Draws a 1x1x1 cube centered on (0,0,0) then transformed by the given transformations */		
 	void Cube(point3_t *translations, point4_t *rotations, point3_t *scales,
@@ -65,7 +71,14 @@ namespace kdraw
 	void Cone(int segs, point3_t *translations, point4_t *rotations, point3_t *scales,
 			  int ntrans, int nrots, int nscales);
 
+	/* Draws a cone of diameter 1 and height 1 then transformed by the given transformations */
 	void Cone(int segs, point3_t translation, point4_t rotation, point3_t scale);
+	
+	/* Draws a unit sphere that is then transformed by the given transformations */
+	void Sphere(int segs, point3_t *translations, point3_t *scales, int ntrans, int nscales);
+	
+	/* Draws a unit sphere that is then transformed by the given transformations */
+	void Sphere(int segs, point3_t translation, point3_t scale);
 }
 
 /*********************************************************************
@@ -74,12 +87,6 @@ namespace kdraw
  *********************************************************************
  *********************************************************************/
 
-/*
- *  Draw a cube
- *     at (x,y,z)
- *     dimentions (dx,dy,dz)
- *     rotated th about the y axis
- */
 void kdraw::Cube(point3_t *translations, point4_t *rotations, point3_t *scales,
 		  		 int ntrans, int nrots, int nscales)
 {
@@ -252,17 +259,26 @@ void kdraw::Cone(int segs, point3_t *translations, point4_t *rotations, point3_t
 	ComputeCirclePoints(0.5, points, segs+1);
 	
 	// draw the flat face
-	glColor3f(1,0,0);
+	glColor3f(0,1,0);
 	glBegin(GL_POLYGON);
 	for(int i = 0; i < segs+1; i++)
 		glVertex3d(points[i].x, points[i].y, 0);
 	glEnd();
 	
 	// draw the sides
+	glColor3f(1,1,1);
 	glBegin(GL_TRIANGLE_FAN);
 	glVertex3d(0, 0, 1); // the tip of the cone
 	for(int i = 0; i < segs+1; i++) // the base of the cone
-		glVertex3d(points[i].x, points[i].y, 0);		
+	{
+		double hue = 360 * ((double)i)/(segs+1);
+		double sat = 1;
+		double val = 1;
+		double r, g, b;
+		HSVtoRGB(&r, &g, &b, hue, sat, val);
+		glColor3f(r,g,b);
+		glVertex3d(points[i].x, points[i].y, 0);
+	}
 	glEnd();
 	
 	// Undo transformations
@@ -277,6 +293,59 @@ void kdraw::Cone(int segs, point3_t translation, point4_t rotation, point3_t sca
 	
 	Cone(segs, translations, rotations, scales, 1, 1, 1);
 }
+
+void kdraw::Sphere(int segs, point3_t *translations, point3_t *scales, int ntrans, int nscales)
+{
+	const int d=5;
+	int th,ph;
+	segs = 1;
+
+	//  Save transformation
+	glPushMatrix();
+	
+	//  Offset and scale
+	Transform(translations, scales, ntrans, nscales);
+
+	//  South pole cap
+	glBegin(GL_TRIANGLE_FAN);
+	Vertex(0,-90);
+	for (th=0;th<=360;th+=d)
+	{
+		Vertex(th,d-90);
+	}
+	glEnd();
+
+	//  Latitude bands
+	for (ph=d-90;ph<=90-2*d;ph++)
+	{
+		glBegin(GL_QUAD_STRIP);
+		for (th=0;th<=360;th+=d)
+		{
+			Vertex(th,ph);
+			Vertex(th,ph+d);
+		}
+		glEnd();
+	}
+
+	//  North pole cap
+	glBegin(GL_TRIANGLE_FAN);
+	Vertex(0,90);
+	for (th=0;th<=360;th+=d)
+	{
+		Vertex(th,90-d);
+	}
+	glEnd();
+
+	//  Undo transformations
+	glPopMatrix();
+}
+
+void kdraw::Sphere(int segs, point3_t translation, point3_t scale)
+{
+	point3_t translations[1] = { translation };
+	point3_t scales[1] = { scale };
+	Sphere(segs, translations, scales, 1, 1);
+}
 	 
 void kdraw::Transform(point3_t *translations, point4_t *rotations, point3_t *scales,
 	  int ntrans, int nrots, int nscales)
@@ -289,6 +358,13 @@ void kdraw::Transform(point3_t *translations, point4_t *rotations, point3_t *sca
 		glScaled(scales[i].x, scales[i].y, scales[i].z);
 }
 
+void kdraw::Transform(point3_t *translations, point3_t *scales, int ntrans, int nscales)
+{
+	point4_t rotation = {0,0,0,0};
+	point4_t rotations[1] = { rotation };
+	Transform(translations, rotations, scales, ntrans, 1, nscales);
+}
+
 void kdraw::Transform(point3_t translation, point4_t rotation, point3_t scale)
 {
 	point3_t translations[1] = { translation };
@@ -296,6 +372,12 @@ void kdraw::Transform(point3_t translation, point4_t rotation, point3_t scale)
 	point3_t scales[1] = { scale };
 	
 	kdraw::Transform(translations, rotations, scales, 1, 1, 1);
+}
+
+void kdraw::Transform(point3_t translation, point3_t scale)
+{
+	point4_t rotation = {0,0,0,0};	
+	kdraw::Transform(translation, rotation, scale);
 }
 
 void kdraw::DrawAxes(float r=1, float g=1, float b=1, float len=1)

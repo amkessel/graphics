@@ -1,0 +1,12 @@
+Andrew Kessel
+CSCI 5229 Homework 3 (3D Scene)
+9/15/2011
+
+Time to complete: ~10 hours
+
+General usage:
+
+"a" - turns axes on and off
+arrow keys - rotates view
+
+In addition to the cube and sphere given in example 8, I created primitive objects for arches and cones. I then created the various letters and the cow out of a combination of these primitives using various transformations.

@@ -26,11 +26,11 @@
  
 #define PI 3.1415927
 
-#define KUTIL_MIN2(A,B) (A < B) ? A : B
-#define KUTIL_MAX2(A,B) (A >= B) ? A : B
+#define KUTILS_MIN2(A,B) (A < B) ? A : B
+#define KUTILS_MAX2(A,B) (A >= B) ? A : B
 
-#define KUTIL_COS(x) (cos((x)*PI/180))
-#define KUTIL_SIN(x) (sin((x)*PI/180))
+#define KUTILS_COS(x) (cos((x)*PI/180))
+#define KUTILS_SIN(x) (sin((x)*PI/180))
 
 /*********************************************************************
  *********************************************************************
@@ -115,7 +115,11 @@ namespace kutils
 	/* Computes the points on a circle of radius r */
 	void ComputeCirclePoints(double r, point2_t *points, int n);
 	
+	/* Computes the points on an arc spanning an angle of 'degrees' */
 	void ComputeArchPoints(double r, double degrees, point2_t *points, int n);
+	
+	/* Draw vertex in polar coordinates */
+	void Vertex(double theta, double phi);
 }
 
 /*********************************************************************
@@ -123,6 +127,12 @@ namespace kutils
  * IMPLEMENTATIONS
  *********************************************************************
  *********************************************************************/
+ 
+void kutils::Vertex(double theta, double phi)
+{
+   glColor3f(KUTILS_COS(theta)*KUTILS_COS(theta) , KUTILS_SIN(phi)*KUTILS_SIN(phi) , KUTILS_SIN(theta)*KUTILS_SIN(theta));
+   glVertex3d(KUTILS_SIN(theta)*KUTILS_COS(phi) , KUTILS_SIN(phi) , KUTILS_COS(theta)*KUTILS_COS(phi));
+}
  
 void kutils::ComputeArchPoints(double r, double degrees, point2_t *points, int n)
 {
@@ -135,8 +145,8 @@ void kutils::ComputeArchPoints(double r, double degrees, point2_t *points, int n
 	
 	for(int i = 0; i < n; i++)
 	{
-		points[i].x = r * KUTIL_COS(dt * i);
-		points[i].y = r * KUTIL_SIN(dt * i);
+		points[i].x = r * KUTILS_COS(dt * i);
+		points[i].y = r * KUTILS_SIN(dt * i);
 	}
 }
 

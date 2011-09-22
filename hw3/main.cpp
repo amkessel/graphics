@@ -1,10 +1,13 @@
-/*
- *  Object Examples
- *  'm' to switch modes (objects)
- *  'a' to toggle axes
- *  '0' snaps angles to 0,0
- *  arrows to rotate the world
- */
+/***************************************************
+ * main.cpp
+ *
+ * Andrew Kessel
+ * Created 9/19/2011
+ *
+ * Main program file for CSCI 5229, Homework 3
+ *
+ ***************************************************/
+ 
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
@@ -18,113 +21,10 @@
 
 int th=0;         //  Azimuth of view angle
 int ph=0;         //  Elevation of view angle
-double zh=0;      //  Rotation of teapot
-int axes=1;       //  Display axes
-int mode=0;       //  What to display
-
-//  Cosine and Sine in degrees
-#define Cos(x) (cos((x)*3.1415927/180))
-#define Sin(x) (sin((x)*3.1415927/180))
+bool axes = true; //  Display axes
 
 using namespace kutils;
-using namespace kdraw;
-
-/*
- *  Draw vertex in polar coordinates
- */
- /*
-static void Vertex(double th,double ph)
-{
-   glColor3f(Cos(th)*Cos(th) , Sin(ph)*Sin(ph) , Sin(th)*Sin(th));
-   glVertex3d(Sin(th)*Cos(ph) , Sin(ph) , Cos(th)*Cos(ph));
-}
-*/
-
-/*
- *  Draw a sphere (version 1)
- *     at (x,y,z)
- *     radius (r)
- */
- /*
-static void sphere1(double x,double y,double z,double r)
-{
-   const int d=5;
-   int th,ph;
-
-   //  Save transformation
-   glPushMatrix();
-   //  Offset and scale
-   glTranslated(x,y,z);
-   glScaled(r,r,r);
-
-   //  South pole cap
-   glBegin(GL_TRIANGLE_FAN);
-   Vertex(0,-90);
-   for (th=0;th<=360;th+=d)
-   {
-      Vertex(th,d-90);
-   }
-   glEnd();
-
-   //  Latitude bands
-   for (ph=d-90;ph<=90-2*d;ph++)
-   {
-      glBegin(GL_QUAD_STRIP);
-      for (th=0;th<=360;th+=d)
-      {
-         Vertex(th,ph);
-         Vertex(th,ph+d);
-      }
-      glEnd();
-   }
-
-   //  North pole cap
-   glBegin(GL_TRIANGLE_FAN);
-   Vertex(0,90);
-   for (th=0;th<=360;th+=d)
-   {
-      Vertex(th,90-d);
-   }
-   glEnd();
-
-   //  Undo transformations
-   glPopMatrix();
-}
-*/
-
-/*
- *  Draw a sphere (version 2)
- *     at (x,y,z)
- *     radius (r)
- */
-/*
-static void sphere2(double x,double y,double z,double r)
-{
-   const int d=5;
-   int th,ph;
-
-   //  Save transformation
-   glPushMatrix();
-   //  Offset and scale
-   glTranslated(x,y,z);
-   glScaled(r,r,r);
-
-   //  Latitude bands
-   for (ph=-90;ph<90;ph+=d)
-   {
-      glBegin(GL_QUAD_STRIP);
-      for (th=0;th<=360;th+=d)
-      {
-         Vertex(th,ph);
-         Vertex(th,ph+d);
-      }
-      glEnd();
-   }
-
-   //  Undo transformations
-   glPopMatrix();
-}
-*/		  
+using namespace kdraw;		  
 
 void Draw_H(point3_t translation, point4_t rotation, point3_t scale)
 {
@@ -227,17 +127,17 @@ void Draw_Y(point3_t translation, point4_t rotation, point3_t scale)
 	Transform(translation, rotation, scale);
 	
 	// build it up from three modified cubes
-	point3_t trans_left = {-0.25, 0.5, 0};
-	point3_t scale_left = {0.707, 0.2, 0.2};
-	point4_t rot_left = {0, 0, 1, -45};
+	point3_t trans_left = {-0.25, 0.35, 0};
+	point3_t scale_left = {0.87, 0.2, 0.2};
+	point4_t rot_left = {0, 0, 1, -56.31};
 	
-	point3_t trans_mid = {0, -0.15, 0};
-	point3_t scale_mid = {0.2, 0.8, 0.2};
+	point3_t trans_mid = {0, -0.375, 0};
+	point3_t scale_mid = {0.2, 0.75, 0.2};
 	point4_t rot_mid = {0, 0, 0, 0};
 	
-	point3_t trans_right = {0.25, 0.5, 0};
-	point3_t scale_right = {0.707, 0.2, 0.2};
-	point4_t rot_right = {0, 0, 1, 45};
+	point3_t trans_right = {0.25, 0.35, 0};
+	point3_t scale_right = {0.87, 0.2, 0.2};
+	point4_t rot_right = {0, 0, 1, 56.31};
 	
 	Cube(trans_left, rot_left, scale_left);
 	Cube(trans_mid, rot_mid, scale_mid);
@@ -278,8 +178,8 @@ void Draw_C(point3_t translation, point4_t rotation, point3_t scale)
 	double degrees = 155;
 	int segs = 20;
 	
-	Arch(r_outer, r_inner, degrees, segs, trans_top, rot_top, scale_top, false);
-	Arch(r_outer, r_inner, degrees, segs, trans_bottoms, rot_bottoms, scale_bottoms, 1, 2, 1, false);
+	Arch(r_outer, r_inner, degrees, segs, trans_top, rot_top, scale_top, true);
+	Arch(r_outer, r_inner, degrees, segs, trans_bottoms, rot_bottoms, scale_bottoms, 1, 2, 1, true);
 	Cube(trans_left, rot_left, scale_left);
 	
 	// Undo transformations
@@ -294,6 +194,119 @@ void Draw_W(point3_t translation, point4_t rotation, point3_t scale)
 	// Offset
 	Transform(translation, rotation, scale);
 	
+	// build it up from four modified cubes
+	
+	point3_t trans_far_left = {-0.375, 0, 0};
+	point3_t scale_far_left = {1.52, 0.2, 0.2};
+	point4_t rot_far_left = {0, 0, 1, -80.54};
+	
+	point3_t trans_mid_left = {-0.125, -0.375, 0};
+	point3_t scale_mid_left = {0.79, 0.2, 0.2};
+	point4_t rot_mid_left = {0, 0, 1, 71.57};
+	
+	point3_t trans_mid_right = {0.125, -0.375, 0};
+	point3_t scale_mid_right = {0.79, 0.2, 0.2};
+	point4_t rot_mid_right = {0, 0, 1, -71.57};
+	
+	point3_t trans_far_right = {0.375, 0, 0};
+	point3_t scale_far_right = {1.52, 0.2, 0.2};
+	point4_t rot_far_right = {0, 0, 1, 80.54};
+	
+	point3_t trans_mid_tip = {0, -0.07, 0};
+	point3_t scale_mid_tip = {0.2, 0.2, 0.2};
+	point4_t rot_mid_tip = {0,0,1,90};
+	
+	point3_t trans_left_tip = {-0.25, -0.68, 0};
+	point3_t scale_left_tip = {0.2, 0.2, 0.2};
+	point4_t rot_left_tip = {0,0,1,90};
+	
+	point3_t trans_right_tip = {0.25, -0.68, 0};
+	point3_t scale_right_tip = {0.2, 0.2, 0.2};
+	point4_t rot_right_tip = {0,0,1,90};
+	
+	Cube(trans_far_left, rot_far_left, scale_far_left);
+	Cube(trans_mid_left, rot_mid_left, scale_mid_left);
+	Cube(trans_mid_right, rot_mid_right, scale_mid_right);
+	Cube(trans_far_right, rot_far_right, scale_far_right);
+	Cube(trans_mid_tip, rot_mid_tip, scale_mid_tip);
+	Cube(trans_left_tip, rot_left_tip, scale_left_tip);
+	Cube(trans_right_tip, rot_right_tip, scale_right_tip);
+	
+	// Undo transformations
+	glPopMatrix();
+}
+
+void Draw_ExclamationPoint(point3_t translation, point4_t rotation, point3_t scale)
+{
+	// Save transformation
+	glPushMatrix();
+	
+	// Offset
+	Transform(translation, rotation, scale);
+	
+	// build from a cone and sphere
+	
+	int segs = 20;
+	
+	point3_t trans_cone = {0, 0.75, 0};
+	point3_t scale_cone = {0.5, 0.5, 1};
+	point4_t rot_cone = {1, 0, 0, 90};
+	
+	point3_t trans_sphere = {0, -0.5, 0};
+	point3_t scale_sphere = {0.2, 0.2, 0.2};
+	
+	Cone(segs, trans_cone, rot_cone, scale_cone);
+	Sphere(segs, trans_sphere, scale_sphere);
+	
+	// Undo transformations
+	glPopMatrix();
+}
+
+void Draw_Cow(point3_t translation, point4_t rotation, point3_t scale)
+{
+	// Save transformation
+	glPushMatrix();
+	
+	// Offset
+	Transform(translation, rotation, scale);
+	
+	point3_t trans_body = {0,0,0};
+	point3_t scale_body = {1, 0.5, 0.5};
+	point4_t rot_body = {0,0,0,0};
+	
+	point3_t trans_head = {0.6, 0.4, 0};
+	point3_t scale_head = {0.3, 0.3, 0.5};
+	point4_t rot_head = {0,1,0,90};
+	
+	point3_t trans_leg = {0.45, -0.4, 0.175};
+	point3_t scale_leg = {0.1, 0.3, 0.1};
+	point4_t rot_leg = {0,0,0,0};
+	
+	point3_t trans_horn = {0.5, 0.75, 0};
+	point3_t scale_horn = {1, 1, 0.1};
+	point4_t rot_horn1 = {0, 1, 0, 90};
+	point4_t rot_horn2 = {0,0,1,180};
+	
+	Cube(trans_body, rot_body, scale_body);
+	Cube(trans_head, rot_head, scale_head);
+	Cube(trans_leg, rot_leg, scale_leg);
+	trans_leg.x = -0.45;
+	Cube(trans_leg, rot_leg, scale_leg);
+	trans_leg.z = -0.175;
+	Cube(trans_leg, rot_leg, scale_leg);
+	trans_leg.x = 0.45;
+	Cube(trans_leg, rot_leg, scale_leg);
+	
+	double r_outer = 0.4;
+	double r_inner = 0.3;
+	double degrees = 180;
+	int segs = 5;
+	point3_t trans_horns[1] = { trans_horn };
+	point3_t scale_horns[1] = { scale_horn };
+	point4_t rot_horns[2] = { rot_horn1, rot_horn2 };
+	
+	Arch(r_outer, r_inner, degrees, segs, trans_horns, rot_horns, scale_horns, 1, 2, 1, true);
+	
 	// Undo transformations
 	glPopMatrix();
 }
@@ -303,109 +316,58 @@ void Draw_W(point3_t translation, point4_t rotation, point3_t scale)
  */
 void display()
 {
-//   const double len=1.5;  //  Length of axes
-   //  Erase the window and the depth buffer
-   glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
-   //  Enable Z-buffering in OpenGL
-   glEnable(GL_DEPTH_TEST);
-   //  Undo previous transformations
-   glLoadIdentity();
-   //  Set view angle
-   glRotatef(ph,1,0,0);
-   glRotatef(th,0,1,0);
-   //  Decide what to draw
-   point3_t translation = {0, 0, 0};
-   point4_t rotation = {1, 0, 0, 0};
-   point3_t scale = {1, 1, 1};
-//   Cone(1.0, 20, translation, scale, rotation);
-//	Arch(1.0, 0.75, PI/4, 5, translation, scale, rotation, false);
-//	Draw_H(translation, rotation, scale);
-//	Draw_O(translation, rotation, scale);
-//	Draw_L(translation, rotation, scale);
-//	Draw_Y(translation, rotation, scale);
+	//  Erase the window and the depth buffer
+	glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+	//  Enable Z-buffering in OpenGL
+	glEnable(GL_DEPTH_TEST);
+	//  Undo previous transformations
+	glLoadIdentity();
+	//  Set view angle
+	glRotatef(ph,1,0,0);
+	glRotatef(th,0,1,0);
+   
+	// transformation objects
+   	point3_t translation = {0, 0, 0};
+	point4_t rotation = {0, 1, 0, -90};
+	point3_t scale = {0.4, 0.5, 0.5};
+	Draw_Cow(translation, rotation, scale);
+	
+	rotation.y = 0;
+	rotation.w = 0;
+	
+	// draw "HOLY"
+	translation.x = -2;
+	Draw_H(translation, rotation, scale);
+	translation.x = -1.5;
+	Draw_O(translation, rotation, scale);
+	translation.x = -1;
+	Draw_L(translation, rotation, scale);
+	translation.x = -0.5;
+	Draw_Y(translation, rotation, scale);
+
+	// draw "COW!"
+	translation.x = 0.5;
 	Draw_C(translation, rotation, scale);
-/*   switch (mode)
-   {
-      //  Draw cubes
-      case 0:
-         cube(0,0,0 , 0.3,0.3,0.3 , 0);
-         cube(1,0,0 , 0.2,0.2,0.2 , 45);
-         cube(0,1,0 , 0.4,0.4,0.2 , 90);
-         break;
-      //  Draw spheres
-      case 1:
-         sphere1(0,0,0 , 0.4);
-         sphere1(1,0,0 , 0.2);
-         sphere2(0,1,0 , 0.2);
-         break;
-      //  Line airplane
-      case 2:
-         PolyPlane(GL_LINE_LOOP , 0,0,0);
-         break;
-      //  Polygon airplane
-      case 3:
-         PolyPlane(GL_POLYGON , 0,0,0);
-         break;
-      //  Three flat airplanes
-      case 4:
-         FlatPlane( 0.0, 0.0, 0.0);
-         FlatPlane(-0.5, 0.5,-0.5);
-         FlatPlane(-0.5,-0.5,-0.5);
-         break;
-      // Three solid airplanes
-      case 5:
-         SolidPlane( 0, 0, 0 , 1,0,0 , 0, 1,0);
-         SolidPlane(-1, 1, 0 ,-1,0,0 , 0,-1,0);
-         SolidPlane(-1,-1, 0 ,-1,0,0 , 0, 1,0);
-         break;
-      // Mix of objects
-      case 6:
-         //  Cube
-         cube(-1,0,0 , 0.3,0.3,0.3 , 3*zh);
-         //  Ball
-         sphere1(0,0,0 , 0.3);
-         //  Solid Airplane
-         SolidPlane(Cos(zh),Sin(zh), 0 ,-Sin(zh),Cos(zh),0 , Cos(4*zh),0,Sin(4*zh));
-         //  Utah Teapot
-         glPushMatrix();
-         glTranslatef(0,0,-1);
-         glRotatef(zh,0,1,0);
-         glColor3f(Cos(zh)*Cos(zh),0,Sin(zh)*Sin(zh));
-         glutSolidTeapot(0.5);
-         glPopMatrix();
-         break;
-   }
-   //  White
-   glColor3f(1,1,1);
-   //  Draw axes
-   if (axes)
-   {
-      glBegin(GL_LINES);
-      glVertex3d(0.0,0.0,0.0);
-      glVertex3d(len,0.0,0.0);
-      glVertex3d(0.0,0.0,0.0);
-      glVertex3d(0.0,len,0.0);
-      glVertex3d(0.0,0.0,0.0);
-      glVertex3d(0.0,0.0,len);
-      glEnd();
-      //  Label axes
-      glRasterPos3d(len,0.0,0.0);
-      Print("X");
-      glRasterPos3d(0.0,len,0.0);
-      Print("Y");
-      glRasterPos3d(0.0,0.0,len);
-      Print("Z");
-   }
-   */
-   DrawAxes(1,1,1,1.5);
-   //  Five pixels from the lower left corner of the window
-   glWindowPos2i(5,5);
-   //  Print the text string
-   Print("Angle=%d,%d",th,ph);
-   //  Render the scene
-   glFlush();
-   //  Make the rendered scene visible
-   glutSwapBuffers();
+	translation.x = 1;
+	Draw_O(translation, rotation, scale);
+	translation.x = 1.5;
+	Draw_W(translation, rotation, scale);
+	translation.x = 2;
+	Draw_ExclamationPoint(translation, rotation, scale);
+	
+	if(axes)
+		DrawAxes(1,1,1,1.5);
+	
+	//  Five pixels from the lower left corner of the window
+	glWindowPos2i(5,5);
+	//  Print the text string
+	Print("Angle=%d,%d",th,ph);
+	
+	//  Render the scene
+	glFlush();
+	
+	//  Make the rendered scene visible
+	glutSwapBuffers();
 }
 
 /*
@@ -446,11 +408,7 @@ void key(unsigned char ch,int x,int y)
    //  Toggle axes
    else if (ch == 'a' || ch == 'A')
       axes = 1-axes;
-   //  Switch display mode
-   else if (ch == 'm')
-      mode = (mode+1)%7;
-   else if (ch == 'M')
-      mode = (mode+6)%7;
+      
    //  Tell GLUT it is necessary to redisplay the scene
    glutPostRedisplay();
 }
@@ -482,9 +440,9 @@ void reshape(int width,int height)
  */
 void idle()
 {
-   double t = glutGet(GLUT_ELAPSED_TIME)/1000.0;
-   zh = fmod(90*t,360);
-   glutPostRedisplay();
+//	double t = glutGet(GLUT_ELAPSED_TIME)/1000.0;
+//	zh = fmod(90*t,360);
+//	glutPostRedisplay();
 }
 
 /*
