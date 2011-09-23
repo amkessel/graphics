@@ -120,6 +120,9 @@ namespace kutils
 	
 	/* Draw vertex in polar coordinates */
 	void Vertex(double theta, double phi);
+	
+	/* Finds the cartesian coordinates of a point on a circle */
+	void ConvertCircleToCartesianCoord(double theta, double r, double *x, double *y);
 }
 
 /*********************************************************************
@@ -127,6 +130,12 @@ namespace kutils
  * IMPLEMENTATIONS
  *********************************************************************
  *********************************************************************/
+ 
+void kutils::ConvertCircleToCartesianCoord(double theta, double r, double *x, double *y)
+{
+	*x = r * KUTILS_COS(theta);
+	*y = r * KUTILS_SIN(theta);
+}
  
 void kutils::Vertex(double theta, double phi)
 {

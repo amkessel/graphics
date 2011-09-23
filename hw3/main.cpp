@@ -22,6 +22,7 @@
 int th=0;         //  Azimuth of view angle
 int ph=0;         //  Elevation of view angle
 bool axes = true; //  Display axes
+double circling_cows_angle = 0.0; // rotation of cows
 
 using namespace kutils;
 using namespace kdraw;		  
@@ -328,12 +329,11 @@ void display()
    
 	// transformation objects
    	point3_t translation = {0, 0, 0};
-	point4_t rotation = {0, 1, 0, -90};
+	point4_t rotation = {0, 0, 0, 0};
 	point3_t scale = {0.4, 0.5, 0.5};
-	Draw_Cow(translation, rotation, scale);
 	
-	rotation.y = 0;
-	rotation.w = 0;
+	if(axes)
+		DrawAxes(1,1,1,1.5);
 	
 	// draw "HOLY"
 	translation.x = -2;
@@ -354,9 +354,52 @@ void display()
 	Draw_W(translation, rotation, scale);
 	translation.x = 2;
 	Draw_ExclamationPoint(translation, rotation, scale);
+		
+	// draw the center cow
+	translation.x = 0;
+	rotation.y = 1;
+	rotation.w = -90;	
+	Draw_Cow(translation, rotation, scale);
 	
-	if(axes)
-		DrawAxes(1,1,1,1.5);
+	// draw the orbiting cows
+	translation.y = 1;
+	
+	double x, z;
+	double angle = fmod(circling_cows_angle,360);
+	ConvertCircleToCartesianCoord(angle, 1, &x, &z);	
+	translation.x = x;
+	translation.z = z;
+	rotation.z = 1;
+	rotation.w = -circling_cows_angle;
+	scale.x = 0.25;
+	scale.y = 0.25;
+	scale.z = 0.25;
+	Draw_Cow(translation, rotation, scale);
+	
+	angle = fmod(circling_cows_angle+90,360);
+	ConvertCircleToCartesianCoord(angle, 1, &x, &z);
+	translation.x = x;
+	translation.z = z;
+	rotation.y = 1;
+	rotation.z = 1;
+	rotation.w = circling_cows_angle;
+	scale.x = 0.15;
+	scale.y = 0.15;
+	scale.z = 0.15;
+	Draw_Cow(translation, rotation, scale);
+	
+	angle = fmod(circling_cows_angle+215,360);
+	ConvertCircleToCartesianCoord(angle, 1, &x, &z);
+	translation.x = x;
+	translation.z = z;
+	rotation.x = 1;
+	rotation.y = 1;
+	rotation.z = 1;
+	rotation.w = 2 * circling_cows_angle;
+	scale.x = 0.75;
+	scale.y = 0.75;
+	scale.z = 0.75;
+	Draw_Cow(translation, rotation, scale);
 	
 	//  Five pixels from the lower left corner of the window
 	glWindowPos2i(5,5);
@@ -440,9 +483,9 @@ void reshape(int width,int height)
  */
 void idle()
 {
-//	double t = glutGet(GLUT_ELAPSED_TIME)/1000.0;
-//	zh = fmod(90*t,360);
-//	glutPostRedisplay();
+	double t = glutGet(GLUT_ELAPSED_TIME)/1000.0;
+	circling_cows_angle = fmod(90*t,360);
+	glutPostRedisplay();
 }
 
 /*
@@ -456,7 +499,7 @@ int main(int argc,char* argv[])
    glutInitWindowSize(600,600);
    glutInitDisplayMode(GLUT_RGB | GLUT_DEPTH | GLUT_DOUBLE);
    //  Create the window
-   glutCreateWindow("Objects");
+   glutCreateWindow("Assgn 3: Andrew Kessel");
    //  Tell GLUT to call "idle" when there is nothing else to do
    glutIdleFunc(idle);
    //  Tell GLUT to call "display" when the scene should be drawn

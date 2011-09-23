@@ -9,4 +9,4 @@ General usage:
 "a" - turns axes on and off
 arrow keys - rotates view
 
-In addition to the cube and sphere given in example 8, I created primitive objects for arches and cones. I then created the various letters and the cow out of a combination of these primitives using various transformations.
+In addition to the cube and sphere given in example 8, I created primitive objects for arches and cones. I then created the various letters and the cow out of a combination of these primitives using various transformations (note that I used an arch with very few segments to make the horns of the cow). Then, since they're holy cows, I made them rotate about an invisible halo.
