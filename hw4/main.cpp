@@ -82,9 +82,6 @@ void display()
 		glRotatef(ph,1,0,0);
 		glRotatef(th,0,1,0);
 	}
-	//  Set view angle
-//	glRotatef(ph,1,0,0);
-//	glRotatef(th,0,1,0);
    
 	// transformation objects
    	point3_t translation = {0, 0, 0};
