@@ -1,0 +1,27 @@
+Andrew Kessel
+CSCI 5229 Homework 5 (Lighting)
+10/6/2011
+
+Time to complete: ~8 hours
+
+General usage:
+
+'x' to toggle axes
+'0' snaps angles to 0,0
+arrows to rotate the world
+PgUp/PgDn zooms in/out
++/- changes field of view of perspective
+F1 toggles light distance (1/5)
+'l' toggles lighting
+a/A decrease/increase ambient light
+d/D decrease/increase diffuse light
+s/S decrease/increase specular light
+e/E decrease/increase emitted light
+n/N decrease/increase shininess
+m  toggles light movement
+[] lower/rise light
+
+
+
+
+Nothing else to say here. :)

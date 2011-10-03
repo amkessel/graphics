@@ -330,11 +330,14 @@ void display()
 	// transformation objects
    	point3_t translation = {0, 0, 0};
 	point4_t rotation = {0, 0, 0, 0};
-	point3_t scale = {0.4, 0.5, 0.5};
+//	point3_t scale = {0.4, 0.5, 0.5};
+	point3_t scale = {1, 1, 1};
 	
 	if(axes)
 		DrawAxes(1,1,1,1.5);
-	
+		
+	Arch(1, 0.5, 180, 5, translation, rotation, scale, true);
+/*	
 	// draw "HOLY"
 	translation.x = -2;
 	Draw_H(translation, rotation, scale);
@@ -400,7 +403,7 @@ void display()
 	scale.y = 0.75;
 	scale.z = 0.75;
 	Draw_Cow(translation, rotation, scale);
-	
+*/	
 	//  Five pixels from the lower left corner of the window
 	glWindowPos2i(5,5);
 	//  Print the text string
