@@ -161,14 +161,14 @@ static void Draw_Wave_Tank(point3 *refpoint, point3 *refnorm, point3 translation
 	point4 rot = {0,0,0,0};
 	point3 scl = {1,1,1};
 
-	int npts = 100;
+	int npts = 500;
 	int pitch = npts/2;
 	point3 points[npts];
 	point3 normals[npts];
 	double amp = 0.1;
 	double omega = 10;
 	double zmax = 2.5;
-	double dx = 0.05;
+	double dx = 0.01;
 	ComputeSineWavePoints(amp, omega, sin_phi, zmax, dx, points, normals, npts);
 	
 	int refidx = pitch/2;
@@ -178,6 +178,18 @@ static void Draw_Wave_Tank(point3 *refpoint, point3 *refnorm, point3 translation
 	refnorm->x  = normals[refidx].x;
 	refnorm->y  = normals[refidx].y;
 	refnorm->z  = normals[refidx].z;
+	
+	
+	// turn off lighting, draw normal vector real quick
+	glDisable(GL_LIGHTING);
+	
+   	glColor3d(1,0,0);
+   	glBegin(GL_LINES);
+   	glVertex3d(refpoint->x, refpoint->y, 0);
+   	glVertex3d(refpoint->x+refnorm->x, refpoint->y+refnorm->y, refnorm->z);   	
+   	glEnd();
+	
+	glEnable(GL_LIGHTING);
 
 	// draw the quad sheet	
 	QuadSheet(points, normals, color, npts, npts/2, trans, rot, scl);
@@ -310,6 +322,19 @@ void display()
 	glDisable(GL_LIGHTING);
 	if (axes)
    		DrawAxes(1,1,1,1);
+   		
+   	// draw a normal
+   	
+	// save transformation
+//	glPushMatrix();
+	
+	// Transform
+//	translation.x = 0; translation.y = 0; translation.z = -refpoint.z;
+//	rotation.x = 0; rotation.y = 0; rotation.z = 0; rotation.w = 0;
+//	Transform(translation, rotation, scale);;
+   	
+   	// restore transformation
+//  	glPopMatrix();
 	
    //  Display parameters
    glWindowPos2i(5,5);
