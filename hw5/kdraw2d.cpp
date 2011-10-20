@@ -9,7 +9,7 @@ void kdraw::Quad(point3 p1, point3 p2, point3 p3, point3 p4, point3 normal, poin
 	glColor3f(color.x, color.y, color.z);
 	
 	glBegin(GL_POLYGON);
-	glNormal3d(normal.x, normal.y, normal.z);
+	//glNormal3d(normal.x, normal.y, normal.z);
 	glVertex3d(p1.x, p1.y, p1.z);
 	glVertex3d(p2.x, p2.y, p2.z);
 	glVertex3d(p3.x, p3.y, p3.z);
@@ -59,10 +59,10 @@ void kdraw::QuadSheet(point3 *points, point3 *normals, point3 color, int npoints
 			int idx = j*pitch + i;
 			int idx_jp1 = (j+1)*pitch + i;
 			
-			glNormal3d(normals[idx].x, normals[idx].y, normals[idx].z);
+			//glNormal3d(normals[idx].x, normals[idx].y, normals[idx].z);
 			glVertex3d(points[idx].x, points[idx].y, points[idx].z);
 			
-			glNormal3d(normals[idx_jp1].x, normals[idx_jp1].y, normals[idx_jp1].z);
+			//glNormal3d(normals[idx_jp1].x, normals[idx_jp1].y, normals[idx_jp1].z);
 			glVertex3d(points[idx_jp1].x, points[idx_jp1].y, points[idx_jp1].z);
 		}			
 		glEnd();
@@ -89,7 +89,7 @@ void kdraw::Circle(double r, int segs, point3 color,
 	ComputeCirclePoints(0.5, points, segs+1);
 	
 	glColor3f(color.x, color.y, color.z);
-	glNormal3f(0,0,1);
+	//glNormal3f(0,0,1);
 	glBegin(GL_POLYGON);
 	for(int i = 0; i < segs+1; i++)
 		glVertex3d(points[i].x, points[i].y, 0);
@@ -128,7 +128,7 @@ void kdraw::Triangle(point3 p1, point3 p2, point3 p3, point3 color,
 	point3 normal = ComputeNormal(p1, p2, p3);
 	
 	glColor3f(color.x, color.y, color.z);
-	glNormal3f(normal.x, normal.y, normal.z);
+	//glNormal3f(normal.x, normal.y, normal.z);
 	glBegin(GL_POLYGON);
 	glVertex3d(p1.x, p1.y, p1.z);
 	glVertex3d(p2.x, p2.y, p2.z);

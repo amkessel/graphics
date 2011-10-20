@@ -17,42 +17,42 @@ void kdraw::Cube(point3 *translations, point4 *rotations, point3 *scales,
 	glBegin(GL_QUADS);
 	//  Front
 //	glColor3f(1,0,0);
-	//glNormal3f(0, 0, 1);
+	glNormal3f(0, 0, 1);
 	glVertex3f(-0.5, -0.5, 0.5);
 	glVertex3f(+0.5, -0.5, 0.5);
 	glVertex3f(+0.5, +0.5, 0.5);
 	glVertex3f(-0.5, +0.5, 0.5);
 	//  Back
 //	glColor3f(1,0,0);
-	//glNormal3f(0, 0, -1);
+	glNormal3f(0, 0, -1);
 	glVertex3f(+0.5, -0.5, -0.5);
 	glVertex3f(-0.5, -0.5, -0.5);
 	glVertex3f(-0.5, +0.5, -0.5);
 	glVertex3f(+0.5, +0.5, -0.5);
 	//  Right
 //	glColor3f(0,1,0);
-	//glNormal3f(1, 0, 0);
+	glNormal3f(1, 0, 0);
 	glVertex3f(+0.5, -0.5, +0.5);
 	glVertex3f(+0.5, -0.5, -0.5);
 	glVertex3f(+0.5, +0.5, -0.5);
 	glVertex3f(+0.5, +0.5, +0.5);
 	//  Left
 //	glColor3f(0,1,0);
-	//glNormal3f(-1, 0, 0);
+	glNormal3f(-1, 0, 0);
 	glVertex3f(-0.5, -0.5, -0.5);
 	glVertex3f(-0.5, -0.5, +0.5);
 	glVertex3f(-0.5, +0.5, +0.5);
 	glVertex3f(-0.5, +0.5, -0.5);
 	//  Top
 //	glColor3f(0,0,1);
-	//glNormal3f(0, 1, 0);
+	glNormal3f(0, 1, 0);
 	glVertex3f(-0.5, +0.5, +0.5);
 	glVertex3f(+0.5, +0.5, +0.5);
 	glVertex3f(+0.5, +0.5, -0.5);
 	glVertex3f(-0.5, +0.5, -0.5);
 	//  Bottom
 //	glColor3f(0,0,1);
-	//glNormal3f(0, -1, 0);
+	glNormal3f(0, -1, 0);
 	glVertex3f(-0.5, -0.5, -0.5);
 	glVertex3f(+0.5, -0.5, -0.5);
 	glVertex3f(+0.5, -0.5, +0.5);
@@ -95,7 +95,7 @@ void kdraw::Arch(double r_outer, double r_inner, double degrees, int segs,
 	// draw the front face
 //	glColor3f(1,0,0);
 	// the normal points in the same direction for all quads on this face, which is +z for the front
-	//glNormal3d(0,0,1);
+	glNormal3d(0,0,1);
 	glBegin(GL_QUAD_STRIP);
 	for(int i = 0; i < n; i++)
 	{
@@ -107,7 +107,7 @@ void kdraw::Arch(double r_outer, double r_inner, double degrees, int segs,
 	// draw the back face
 	glBegin(GL_QUAD_STRIP);
 	// the normal points in the same direction for all quads on this face, which is -z for the back
-	//glNormal3d(0,0,-1);
+	glNormal3d(0,0,-1);
 
 	for(int i = 0; i < n; i++)
 	{
@@ -128,7 +128,7 @@ void kdraw::Arch(double r_outer, double r_inner, double degrees, int segs,
 			point3 ip1_front = { outer[i+1].x, outer[i+1].y, 0.5 };
 			
 			point3 normal = ComputeNormal(i_back, i_front, ip1_front);
-			//glNormal3d(normal.x, normal.y, normal.z);
+			glNormal3d(normal.x, normal.y, normal.z);
 		}
 		glVertex3d(outer[i].x, outer[i].y, 0.5);
 		glVertex3d(outer[i].x, outer[i].y, -0.5);
@@ -146,7 +146,7 @@ void kdraw::Arch(double r_outer, double r_inner, double degrees, int segs,
 			point3 ip1_front = { outer[i+1].x, outer[i+1].y, 0.5 };
 			
 			point3 normal = ComputeNormal(ip1_front, i_front, i_back);
-			//glNormal3d(normal.x, normal.y, normal.z);
+			glNormal3d(normal.x, normal.y, normal.z);
 		}
 		glVertex3d(inner[i].x, inner[i].y, -0.5);
 		glVertex3d(inner[i].x, inner[i].y, 0.5);
@@ -163,7 +163,7 @@ void kdraw::Arch(double r_outer, double r_inner, double degrees, int segs,
 		point3 inner_top1 = { inner[0].x,   inner[0].y,  0.5 };
 		point3 inner_bot1 = { inner[0].x,   inner[0].y, -0.5 };	
 		point3 normal = ComputeNormal(inner_bot1, inner_top1, outer_top1);
-		//glNormal3d(normal.x, normal.y, normal.z);
+		glNormal3d(normal.x, normal.y, normal.z);
 			
 		glVertex3d(outer[0].x, outer[0].y, 0.5);
 		glVertex3d(outer[0].x, outer[0].y, -0.5);
@@ -174,7 +174,7 @@ void kdraw::Arch(double r_outer, double r_inner, double degrees, int segs,
 		point3 inner_top2 = { inner[n-1].x, inner[n-1].y,  0.5 };
 		point3 outer_top2 = { outer[n-1].x, outer[n-1].y,  0.5 };	
 		normal = ComputeNormal(outer_top2, inner_top2, inner_bot2);
-		//glNormal3d(normal.x, normal.y, normal.z);
+		glNormal3d(normal.x, normal.y, normal.z);
 		
 		glVertex3d(outer[n-1].x, outer[n-1].y, 0.5);
 		glVertex3d(outer[n-1].x, outer[n-1].y, -0.5);
@@ -225,7 +225,7 @@ void kdraw::Cone(int segs, point3 *translations, point4 *rotations, point3 *scal
 	
 	// draw the flat face
 	glColor3f(1,1,1);
-	//glNormal3f(0,0,-1);
+	glNormal3f(0,0,-1);
 	glBegin(GL_POLYGON);
 	for(int i = 0; i < segs+1; i++)
 		glVertex3d(points[i].x, points[i].y, 0);
@@ -242,7 +242,7 @@ void kdraw::Cone(int segs, point3 *translations, point4 *rotations, point3 *scal
 		point3 normal = ComputeNormal(base1, tip, base2);
 		
 		glBegin(GL_POLYGON);
-		//glNormal3d(normal.x, normal.y, normal.z);
+		glNormal3d(normal.x, normal.y, normal.z);
 		glVertex3d(base1.x,  base1.y,  base1.z);
 		glVertex3d(tip.x,	 tip.y,	   tip.z);
 		glVertex3d(base2.x,  base2.y,  base1.z);
@@ -272,7 +272,7 @@ void kdraw::SpherePoint(double theta, double phi)
 //	glColor3f(KUTILS_COS(theta)*KUTILS_COS(theta) , KUTILS_SIN(phi)*KUTILS_SIN(phi) , KUTILS_SIN(theta)*KUTILS_SIN(theta));
 //	glVertex3d(KUTILS_SIN(theta)*KUTILS_COS(phi) , KUTILS_SIN(phi) , KUTILS_COS(theta)*KUTILS_COS(phi));
 	
-	//glNormal3d(x, y, z);
+	glNormal3d(x, y, z);
 	glVertex3d(x, y, z);
 }
 
