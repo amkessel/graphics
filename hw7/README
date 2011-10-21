@@ -1,0 +1,28 @@
+Andrew Kessel
+CSCI 5229 Homework 6 (Textures)
+10/20/2011
+
+Time to complete: ~15 hours (I spent WAY too much time searching for decent textures!!!)
+
+General usage (mostly the same as the lighting example):
+
+'x' to toggle axes
+'0' snaps angles to 0,0
+arrows to rotate the world
+PgUp/PgDn zooms in/out
++/- changes field of view of perspective
+F1 toggles light distance (1/5)
+'l' toggles lighting
+a/A decrease/increase ambient light
+d/D decrease/increase diffuse light
+s/S decrease/increase specular light
+e/E decrease/increase emitted light
+n/N decrease/increase shininess
+m  toggles light movement
+[] lower/rise light
+
+Notes:
+1. There are some warnings from compilation. However, these are in loadtexbmp.c because I am compiling with g++. Vlakkies said this was okay.
+2. This model is of a variant of the Millenium Falcon in Star Wars. I tried to do the real one, and had all the geometry computed, but could not find decent textures aside from this variant, so I decided to go with this.
+3. The thrust area has a non-black emissivity, so turning the ambient light all the way down (lowercase 'a') showcases that nicely when looking at the back.
+4. I think mapping texture coordinates are much harder than computing lighting normals!
