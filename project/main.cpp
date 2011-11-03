@@ -38,9 +38,16 @@ using namespace kutils;
 #define ORBIT_SPEED_EARTH 0.05
 #define ORBIT_SPEED_MOON  0.5
 
+#define SPEED_LIMIT 2 // units per second (note that the sun's radius is 1 unit)
+#define SPEED_INC 0.01 // how much to increase the speed by per key hit
+#define BRAKE_INC 0.9 // percentage of speed to reduce to per key hit
+#define JUMP_DIST 1 // how far to jump ahead
+
+#define GRAV_STRENGTH 0.05 // how much effect gravity has on the velocity
+
 // viewing constants
-#define FOLLOW_DIST     0.2
-#define VIEW_DIST_AHEAD 5
+#define FOLLOW_DIST     0.2  // how far behind the spaceship the eye should be
+#define VIEW_DIST_AHEAD 1    // how far ahead of the spaceship the focal point is
 #define EYE_HEIGHT_INC  0.01
 
 int axes=0;       //  Display axes
@@ -65,7 +72,8 @@ float ylight  =   2;  // Elevation of light
 
 // game state
 point3 falcon_pos = {-2,FALCON_HEIGHT,-2};
-int falcon_dir = 270; // angle from the x-axis that the falcon is pointing
+point3 falcon_vel = {0.0,0.0,0.0};
+int falcon_dir = 271; // angle from the x-axis that the falcon is pointing
 double eye_height = 0.05;
 double orbit_angle_earth = 0.0;
 double rotate_angle_earth = 0.0;
@@ -73,6 +81,7 @@ double orbit_angle_moon = 0.0;
 double rotate_angle_moon = 0.0;
 bool show_grid = true;
 bool show_sheet = true;
+double last_time = 0.0;
 
 point3 no_translation = {0,0,0};
 point4 no_rotation = {0,0,0,0};
@@ -147,16 +156,99 @@ void set_lighting()
 
 void set_eye_position()
 {
-	double dist = -1 * FOLLOW_DIST;
+
+	double dist = -1 * (FOLLOW_DIST+1.5*eye_height);
 
 	double Ex = falcon_pos.x + dist * KUTILS_COS(falcon_dir);
 	double Ey = falcon_pos.y + eye_height;
 	double Ez = falcon_pos.z - dist * KUTILS_SIN(falcon_dir);
+	
+	double Cx = falcon_pos.x + VIEW_DIST_AHEAD * KUTILS_COS(falcon_dir);
+	double Cy = falcon_pos.y;
+	double Cz = falcon_pos.z - VIEW_DIST_AHEAD * KUTILS_SIN(falcon_dir);
 
-	gluLookAt(Ex,Ey,Ez , falcon_pos.x,falcon_pos.y,falcon_pos.z, 0,1,0);
+/*	// TOP DOWN VIEW FOR DEBUGGING
+	double Ex = falcon_pos.x;
+	double Ey = falcon_pos.y + eye_height;
+	double Ez = falcon_pos.z;
+	
+	double Cx = falcon_pos.x + 0.01;
+	double Cy = falcon_pos.y;
+	double Cz = falcon_pos.z;
+*/
+	gluLookAt(Ex,Ey,Ez , Cx,Cy,Cz, 0,1,0);	
+}
+/*
+void move_falcon_dist(double dist, double dir)
+{
+	printf("move_falcon_dist\n");
+	falcon_pos.x += dist * KUTILS_COS(dir);
+	falcon_pos.z -= dist * KUTILS_SIN(dir);
 }
 
-void move_falcon(double dist)
+void move_falcon(double time) // time is in sec
+{
+	printf("move_falcon\n");
+	double vel = sqrt(falcon_vel.x*falcon_vel.x + falcon_vel.z*falcon_vel.z); // units per sec
+	double dist = vel * (time-last_time);
+	double dir = atan(falcon_vel.z / falcon_vel.x); // angle from the x-axis
+	
+	move_falcon_dist(dist,dir);
+}
+*/
+
+point3 find_weighted_norm()
+{
+	// The falcon is always between points SHEET_PTS/2-1 and SHEET_PTS/2 in the x and z direction
+	point3 n1 = norms[SHEET_PTS/2-1][SHEET_PTS/2-1];
+	point3 n2 = norms[SHEET_PTS/2  ][SHEET_PTS/2-1];
+	point3 n3 = norms[SHEET_PTS/2  ][SHEET_PTS/2  ];
+	point3 n4 = norms[SHEET_PTS/2-1][SHEET_PTS/2  ];
+
+	point3 pf = falcon_pos;
+	
+	// just find the average for now
+	point3 result = { (n1.x+n2.x+n3.x+n4.x)/4,
+					  0,						// we don't need the y component
+					  (n1.z+n2.z+n3.z+n4.z)/4 };
+
+	return result;
+}
+
+void update_velocity()
+{
+	point3 weighted_norm = find_weighted_norm();
+	
+	falcon_vel.x += GRAV_STRENGTH*weighted_norm.x;
+	falcon_vel.z += GRAV_STRENGTH*weighted_norm.z;
+}
+
+void move_falcon(double time) // time is in sec
+{
+	double delta_t = time-last_time;
+
+	falcon_pos.x += delta_t * falcon_vel.x;
+	falcon_pos.z += delta_t * falcon_vel.z;
+}
+
+void increase_velocity(double amt)
+{
+	double vel = sqrt(falcon_vel.x*falcon_vel.x + falcon_vel.z*falcon_vel.z);
+
+	if(vel + amt <= SPEED_LIMIT)
+	{
+		falcon_vel.x += amt * KUTILS_COS(falcon_dir);
+		falcon_vel.z -= amt * KUTILS_SIN(falcon_dir);
+	}
+}
+
+void brake(double percent)
+{
+	falcon_vel.x *= percent;
+	falcon_vel.z *= percent;
+}
+
+void jump(double dist)
 {
 	falcon_pos.x += dist * KUTILS_COS(falcon_dir);
 	falcon_pos.z -= dist * KUTILS_SIN(falcon_dir);
@@ -228,6 +320,15 @@ void idle()
    // moon orbit
    orbit_angle_moon = fmod(90*t*ORBIT_SPEED_MOON,360.0);
    
+   // update falcon's velocity
+   update_velocity();
+   
+   // move the falcon
+   move_falcon(t);
+   
+   // set the last time
+   last_time = t;
+   
    //  Tell GLUT it is necessary to redisplay the scene
    glutPostRedisplay();
 }
@@ -241,27 +342,25 @@ void special(int key,int x,int y)
    if (key == GLUT_KEY_RIGHT)
    {
       falcon_dir -= 5;
-      move_falcon(0);
-      //set_eye_position();
+//      move_falcon(0);
    }
    //  Left arrow key - decrease angle by 5 degrees
    else if (key == GLUT_KEY_LEFT)
    {
       falcon_dir += 5;
-      move_falcon(0);
-      //set_eye_position();
+//      move_falcon(0);
    }
    //  Up arrow key
    else if (key == GLUT_KEY_UP)
    {
-      move_falcon(0.1);
-      //set_eye_position();
+      increase_velocity(SPEED_INC);
+      //move_falcon(0.1);
    }
    //  Down arrow key
    else if (key == GLUT_KEY_DOWN)
    {
-      move_falcon(-0.1);
-      //set_eye_position();
+      increase_velocity(-SPEED_INC);
+      //move_falcon(-0.1);
    }
    //  PageUp key - increase view elevation
    else if (key == GLUT_KEY_PAGE_DOWN)
@@ -287,6 +386,12 @@ void key(unsigned char ch,int x,int y)
    //  Exit on ESC
    if (ch == 27)
       exit(0);
+   // Space bar: brake
+   else if (ch == 32) 
+      brake(BRAKE_INC);
+   // Enter: jump
+   else if (ch == 13)
+      jump(JUMP_DIST);
    //  Reset view angle
    //else if (ch == '0')
    //   th = ph = 0;
@@ -403,6 +508,7 @@ int main(int argc,char* argv[])
 	{
 		planet_tex[i] = LoadTexBMP(planet_tex_names[i]);
 	}
+	last_time = glutGet(GLUT_ELAPSED_TIME)/1000.0;
 	//  Pass control to GLUT so it can interact with the user
 	glutMainLoop();
 	return 0;

@@ -53,6 +53,18 @@ void Draw_sheet(point3 pts[SHEET_PTS][SHEET_PTS], point3 norms[SHEET_PTS][SHEET_
 				// draw the grid
 				double color = sheet ? GRID_COLOR : 1-GRID_COLOR;
 				
+				/*
+				// DRAW NORMALS ON SHEET FOR DEBUGGING
+				if( (i == SHEET_PTS/2 || i == SHEET_PTS/2-1) && (j == SHEET_PTS/2 || j == SHEET_PTS/2-1))
+				{
+					glColor3d(1,0,0);
+					glBegin(GL_LINES);
+					glVertex3d(p_i_j.x, p_i_j.y, p_i_j.z);
+					glVertex3d(p_i_j.x + n_i_j.x*0.1, p_i_j.y + n_i_j.y*0.1, p_i_j.z + n_i_j.z*0.1);
+					glEnd();
+				}
+				*/
+				
 				glColor3d(color,color,color);
 				glBegin(GL_LINE_STRIP);
 				glVertex3d(p_i_j.x,     p_i_j.y,     p_i_j.z);
@@ -152,10 +164,15 @@ double calculate_gravity(point3 pt, point3 body, double mass, double radius)
 {
 	double dist = sqrt( (pt.x-body.x)*(pt.x-body.x) + (pt.z-body.z)*(pt.z-body.z) );
 	
-	double width = 1/radius;
-	double depth = mass;
+	double potential = 0; // default to zero
 	
-	double potential = depth / exp(width*dist*dist);
+//	if(dist < radius * GRAV_CUTOFF)
+//	{
+		double width = 1/radius;
+		double depth = mass;
+	
+		potential = depth / exp(width*dist*dist);
+//	}
 	
 	return potential;
 }

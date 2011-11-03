@@ -10,6 +10,8 @@
 
 #define GRAV_FACTOR 2.0 // factor to add emphasis to gravity well
 
+#define GRAV_CUTOFF 10.0 // multiple of radius of planet afterwhich approximate potential as zero
+
 using namespace kutils;
 
 void Draw_sheet(point3 pts[SHEET_PTS][SHEET_PTS], point3 norms[SHEET_PTS][SHEET_PTS], bool sheet, bool grid);
