@@ -50,6 +50,10 @@ using namespace kutils;
 #define VIEW_DIST_AHEAD 1    // how far ahead of the spaceship the focal point is
 #define EYE_HEIGHT_INC  0.01
 
+// inertial braking orb constants
+#define ORB_ALPHA_INC	0.01
+#define ORB_ALPHA_MAX	0.25
+
 int axes=0;       //  Display axes
 int move=1;       //  Move light
 //int th=-45;         //  Azimuth of view angle
@@ -81,7 +85,9 @@ double orbit_angle_moon = 0.0;
 double rotate_angle_moon = 0.0;
 bool show_grid = true;
 bool show_sheet = true;
-double last_time = 0.0;
+double last_time = 0.0; // used to compute how far the falcon should travel
+double orb_alpha = 0.0; // the transparency of the inertial braking orb
+bool increase_orb_alpha = false;
 
 point3 no_translation = {0,0,0};
 point4 no_rotation = {0,0,0,0};
@@ -93,10 +99,10 @@ point3 norms[SHEET_PTS][SHEET_PTS];
 void draw_scene()
 {
 	// draw the falcon
-	point3 trans = {falcon_pos.x, falcon_pos.y, falcon_pos.z};
-	point4 rot = {0, 1, 0, falcon_dir};
-	point3 scale = {0.01, 0.01, 0.01};
-	Draw_falcon(trans, rot, scale);
+	point3 falcon_trans = {falcon_pos.x, falcon_pos.y, falcon_pos.z};
+	point4 falcon_rot = {0, 1, 0, falcon_dir};
+	point3 falcon_scale = {0.01, 0.01, 0.01};
+	Draw_falcon(falcon_trans, falcon_rot, falcon_scale);
 	
 	// draw the sun
 	point3 sun_trans = {0,SUN_HEIGHT,0};
@@ -121,6 +127,15 @@ void draw_scene()
 	Calculate_sheet_heights(pts, sun_trans, earth_trans, moon_trans);
 	Calculate_sheet_normals(pts, norms);
 	Draw_sheet(pts, norms, show_sheet, show_grid);
+	
+	// draw inertial braking orb
+	if(orb_alpha > 0)
+	{
+		point3 orb_trans = falcon_trans;
+		point3 orb_scale = {0.015,0.015,0.015};
+		//point3 orb_scale = {orb_alpha*ORB_BASE_RAD, orb_alpha*ORB_BASE_RAD, orb_alpha*ORB_BASE_RAD};
+		Draw_Braking_Orb(orb_trans, orb_scale, orb_alpha);
+	}
 }
 
 void set_lighting()
@@ -305,32 +320,39 @@ void display()
  */
 void idle()
 {
-   //  Elapsed time in seconds
-   double t = glutGet(GLUT_ELAPSED_TIME)/1000.0;
-   
-   // light orbit
-   zh = fmod(90*t,360.0);
-   
-   // earth orbit
-   orbit_angle_earth = fmod(90*t*ORBIT_SPEED_EARTH,360.0);
-   
-   // earth rotation
-   rotate_angle_earth = fmod(90*t,360.0);
-   
-   // moon orbit
-   orbit_angle_moon = fmod(90*t*ORBIT_SPEED_MOON,360.0);
-   
-   // update falcon's velocity
-   update_velocity();
-   
-   // move the falcon
-   move_falcon(t);
-   
-   // set the last time
-   last_time = t;
-   
-   //  Tell GLUT it is necessary to redisplay the scene
-   glutPostRedisplay();
+	//  Elapsed time in seconds
+	double t = glutGet(GLUT_ELAPSED_TIME)/1000.0;
+
+	// light orbit
+	zh = fmod(90*t,360.0);
+
+	// earth orbit
+	orbit_angle_earth = fmod(90*t*ORBIT_SPEED_EARTH,360.0);
+
+	// earth rotation
+	rotate_angle_earth = fmod(90*t,360.0);
+
+	// moon orbit
+	orbit_angle_moon = fmod(90*t*ORBIT_SPEED_MOON,360.0);
+
+	// update falcon's velocity
+	update_velocity();
+
+	// move the falcon
+	move_falcon(t);
+
+	// set the last time
+	last_time = t;
+
+	// set whether we need to increase or decrease the orb alpha
+	if(increase_orb_alpha) orb_alpha += ORB_ALPHA_INC;
+	else orb_alpha -= ORB_ALPHA_INC;
+	
+	if(orb_alpha < 0) orb_alpha = 0;
+	else if(orb_alpha > ORB_ALPHA_MAX) orb_alpha = ORB_ALPHA_MAX;
+
+	//  Tell GLUT it is necessary to redisplay the scene
+	glutPostRedisplay();
 }
 
 /*
@@ -378,6 +400,14 @@ void special(int key,int x,int y)
    glutPostRedisplay();
 }
 
+void keyup(unsigned char ch,int x,int y)
+{
+	if (ch == 32)
+	{
+		increase_orb_alpha = false;
+	}  
+}
+
 /*
  *  GLUT calls this routine when a key is pressed
  */
@@ -387,8 +417,11 @@ void key(unsigned char ch,int x,int y)
    if (ch == 27)
       exit(0);
    // Space bar: brake
-   else if (ch == 32) 
+   else if (ch == 32)
+   {
       brake(BRAKE_INC);
+      increase_orb_alpha = true;
+   }  
    // Enter: jump
    else if (ch == 13)
       jump(JUMP_DIST);
@@ -498,6 +531,7 @@ int main(int argc,char* argv[])
 	glutReshapeFunc(reshape);
 	glutSpecialFunc(special);
 	glutKeyboardFunc(key);
+	glutKeyboardUpFunc(keyup);
 	glutIdleFunc(idle);
 	//  Load textures
 	for(int i = 0; i < NUM_FALCON_TEXS; i++)

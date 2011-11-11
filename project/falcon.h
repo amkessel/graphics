@@ -28,5 +28,7 @@ void Draw_falcon(point3 translation, point4 rotation, point3 scale);
 
 void Draw_falcon(point3 *translations, point4 *rotations, point3 *scales,
 				 int ntrans, int nrots, int nscales);
+				 				 
+void Draw_Braking_Orb(point3 translation, point3 scale, double alpha);
 
 #endif

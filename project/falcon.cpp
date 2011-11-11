@@ -26,7 +26,7 @@ using namespace kdraw;
 
 #define HULL_COLOR 1
 	
-GLfloat thrustEmissiveMaterial[] = {5.0, 5.0, 1.0};
+GLfloat thrustEmissiveMaterial[] = {0.5, 0.5, 1.0};
 GLfloat blackEmissiveMaterial[] = {0.0, 0.0, 0.0};
 
 unsigned int falcon_tex[NUM_FALCON_TEXS];
@@ -433,3 +433,65 @@ void Draw_falcon(point3 *translations, point4 *rotations, point3 *scales,
 	glPopMatrix();
 }
 
+static void Vertex(int th,int ph)
+{
+	double x = KUTILS_SIN(th)*KUTILS_COS(ph);
+	double y = KUTILS_COS(th)*KUTILS_COS(ph);
+	double z = KUTILS_SIN(ph);
+	glNormal3d(x,y,z);
+	glTexCoord2d(th/360.0,ph/180.0+0.5);
+	glVertex3d(x,y,z);
+}
+
+void draw_orb()
+{
+   int th,ph;
+
+   //  Set texture
+   //glEnable(GL_TEXTURE_2D);
+   //glBindTexture(GL_TEXTURE_2D, planet_tex[tex]);
+   //  Latitude bands
+   //glColor3f(1,1,1);
+   for (ph=-90;ph<90;ph+=5)
+   {
+      glBegin(GL_QUAD_STRIP);
+      for (th=0;th<=360;th+=5)
+      {
+         Vertex(th,ph);
+         Vertex(th,ph+5);
+      }
+      glEnd();
+   }
+}
+
+void Draw_Braking_Orb(point3 translation, point3 scale, double alpha)
+{
+	//  Save transformation
+	glPushMatrix();
+
+	//  Offset
+	point4 rotation = {0,0,0,0};
+	Transform(&translation, &rotation, &scale, 1, 1, 1);
+
+	glDisable(GL_LIGHTING);
+
+	glEnable(GL_BLEND);
+	glColor4f(0.3,0.3,1,alpha);
+	//if (aone)
+		glBlendFunc(GL_SRC_ALPHA,GL_ONE);
+	//else
+	//	glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
+	glDepthMask(0);
+	glEnable(GL_TEXTURE_2D);
+	
+	draw_orb();
+	
+	glDisable(GL_BLEND);
+	glDepthMask(1);
+	glDisable(GL_TEXTURE_2D);
+	
+	// reset transformation
+	glPopMatrix();
+	
+	glEnable(GL_LIGHTING);
+}
