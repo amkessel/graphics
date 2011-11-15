@@ -46,7 +46,7 @@ double tc(double c, double offset)
 	return (c + offset) / (offset * 2);
 }
 
-void draw_saucer()
+void draw_saucer(bool thrust_on, thrust_box *tbox)
 {
 	int segs = 60;
 	int npts = segs+1;
@@ -104,7 +104,44 @@ void draw_saucer()
 		glBindTexture(GL_TEXTURE_2D, falcon_tex[AROUND_TEX]);
 		// because of the texture, the thrust exists starting at 38% around the circle and ending at 56%
 		if(i > 0.38*npts && i < 0.56*npts)
-			glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, thrustEmissiveMaterial);
+		{
+			if(thrust_on)
+				glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, thrustEmissiveMaterial);
+				
+			// the points are defined going from right to left from this perspective
+			if(i == (int)(0.38*npts) + 1)
+			{
+				tbox->fur.x = p2.x;
+				tbox->fur.y = p2.y;
+				tbox->fur.z = p2.z;
+				tbox->flr.x = p3.x;
+				tbox->flr.y = p3.y;
+				tbox->flr.z = p3.z;
+				
+				tbox->bur.x = -1.0;
+				tbox->bur.y = p2.y;
+				tbox->bur.z = p2.z;
+				tbox->blr.x = p3.x;
+				tbox->blr.y = p3.y;
+				tbox->blr.z = p3.z;
+			}
+			else if (i == (int)(0.56*npts) - 1)
+			{
+				tbox->fll.x = p6.x;
+				tbox->fll.y = p6.y;
+				tbox->fll.z = p6.z;
+				tbox->ful.x = p7.x;
+				tbox->ful.y = p7.y;
+				tbox->ful.z = p7.z;
+				
+				tbox->bll.x = -1.0;
+				tbox->bll.y = p6.y;
+				tbox->bll.z = p6.z;
+				tbox->bul.x = p7.x;
+				tbox->bul.y = p7.y;
+				tbox->bul.z = p7.z;
+			}
+		}
 		
 		glBegin(GL_POLYGON);
 		glNormal3f(p2.x, p2.y, p2.z);
@@ -396,7 +433,7 @@ void draw_forks()
 	glEnd();	
 }
 
-void Draw_falcon()
+void Draw_falcon(bool thrust_on, thrust_box *tbox)
 {		
 	// set up for textures
 	glEnable(GL_TEXTURE_2D);
@@ -406,19 +443,19 @@ void Draw_falcon()
 	glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, blackEmissiveMaterial);
 	
 	draw_forks();
-	draw_saucer();
+	draw_saucer(thrust_on, tbox);
 	draw_cockpit();
 	
 	glDisable(GL_TEXTURE_2D);
 }
 
-void Draw_falcon(point3 translation, point4 rotation, point3 scale)
+void Draw_falcon(point3 translation, point4 rotation, point3 scale, bool thrust_on, thrust_box *tbox)
 {
-	Draw_falcon(&translation, &rotation, &scale, 1, 1, 1);
+	Draw_falcon(&translation, &rotation, &scale, 1, 1, 1, thrust_on, tbox);
 }
 
 void Draw_falcon(point3 *translations, point4 *rotations, point3 *scales,
-				 int ntrans, int nrots, int nscales)
+				 int ntrans, int nrots, int nscales, bool thrust_on, thrust_box *tbox)
 {
 	//  Save transformation
 	glPushMatrix();
@@ -427,7 +464,7 @@ void Draw_falcon(point3 *translations, point4 *rotations, point3 *scales,
 	Transform(translations, rotations, scales, ntrans, nrots, nscales);
 	
 	// draw the model
-	Draw_falcon();
+	Draw_falcon(thrust_on, tbox);
 	
 	// reset transformation
 	glPopMatrix();
@@ -474,8 +511,8 @@ void Draw_Braking_Orb(point3 translation, point3 scale, double alpha)
 	Transform(&translation, &rotation, &scale, 1, 1, 1);
 
 	glDisable(GL_LIGHTING);
-
 	glEnable(GL_BLEND);
+	
 	glColor4f(0.3,0.3,1,alpha);
 	//if (aone)
 		glBlendFunc(GL_SRC_ALPHA,GL_ONE);
@@ -486,12 +523,12 @@ void Draw_Braking_Orb(point3 translation, point3 scale, double alpha)
 	
 	draw_orb();
 	
-	glDisable(GL_BLEND);
 	glDepthMask(1);
 	glDisable(GL_TEXTURE_2D);
 	
+	glDisable(GL_BLEND);
+	glEnable(GL_LIGHTING);
+	
 	// reset transformation
 	glPopMatrix();
-	
-	glEnable(GL_LIGHTING);
 }

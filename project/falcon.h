@@ -5,6 +5,7 @@
 //  OpenGL with prototypes for glext
 #define GL_GLEXT_PROTOTYPES
 #include <GL/glut.h>
+#include "common.h"
 
 #define NUM_FALCON_TEXS 8
 
@@ -22,12 +23,12 @@ using namespace kutils;
 extern unsigned int falcon_tex[]; // textures
 extern char *falcon_tex_names[]; // names of textures
 
-void Draw_falcon();
+void Draw_falcon(bool thrust_on, thrust_box *tbox);
 
-void Draw_falcon(point3 translation, point4 rotation, point3 scale);
+void Draw_falcon(point3 translation, point4 rotation, point3 scale, bool thrust_on, thrust_box *tbox);
 
 void Draw_falcon(point3 *translations, point4 *rotations, point3 *scales,
-				 int ntrans, int nrots, int nscales);
+				 int ntrans, int nrots, int nscales, bool thrust_on, thrust_box *tbox);
 				 				 
 void Draw_Braking_Orb(point3 translation, point3 scale, double alpha);
 

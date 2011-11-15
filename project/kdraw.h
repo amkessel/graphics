@@ -25,10 +25,10 @@ namespace kdraw
 	/* Taken from the CSCIx229 library provided by Dr. Schreuder */
 	void Project(double fov,double asp,double dim);
 	
-	/* TRANSFORMATIONS */
-	
 	/* Draws the xyz axes on the display */
 	void DrawAxes(float r, float g, float b, float len);
+
+	/* TRANSFORMATIONS */
 	
 	/* Performs the offset translations and scales */	
 	void Transform(point3 *translations, point3 *scales, int ntrans, int nscales);
@@ -42,6 +42,9 @@ namespace kdraw
 				
 	/* Performs the offset translations and scales */	
 	void Transform(point3 translation, point3 scale);
+	
+	/* Runs the transformations manually and returns the coordinates of the transformed point */
+	point3 ManualTransformAboutY(point3 translation, point4 rotation, point3 scale, point3 pt);
 	
 	/* 2D OBJECTS */
 	

@@ -19,9 +19,11 @@
 #include "CSCIx229.h"
 
 // model files
+#include "common.h"
 #include "falcon.h"
 #include "sheet.h"
 #include "planets.h"
+#include "thrust.h"
 
 using namespace kdraw;
 using namespace kutils;
@@ -38,10 +40,12 @@ using namespace kutils;
 #define ORBIT_SPEED_EARTH 0.05
 #define ORBIT_SPEED_MOON  0.5
 
-#define SPEED_LIMIT 2 // units per second (note that the sun's radius is 1 unit)
-#define SPEED_INC 0.01 // how much to increase the speed by per key hit
-#define BRAKE_INC 0.9 // percentage of speed to reduce to per key hit
-#define JUMP_DIST 1 // how far to jump ahead
+// control constants
+#define SPEED_LIMIT	2 // units per second (note that the sun's radius is 1 unit)
+#define SPEED_INC	0.01 // how much to increase the speed by per key hit
+#define BRAKE_INC	0.9 // percentage of speed to reduce to per key hit
+#define JUMP_DIST	1 // how far to jump ahead
+#define TURN_RATE	100 // the degrees per second that the falcon can turn
 
 #define GRAV_STRENGTH 0.05 // how much effect gravity has on the velocity
 
@@ -54,8 +58,15 @@ using namespace kutils;
 #define ORB_ALPHA_INC	0.01
 #define ORB_ALPHA_MAX	0.25
 
+enum turn_dir
+{
+	NO_TURN,
+	RIGHT_TURN,
+	LEFT_TURN
+};
+enum turn_dir falcon_turn;
+
 int axes=0;       //  Display axes
-int move=1;       //  Move light
 //int th=-45;         //  Azimuth of view angle
 //int ph=20;         //  Elevation of view angle
 int fov=35;       //  Field of view (for perspective)
@@ -75,19 +86,31 @@ int zh        =  0;  // Light azimuth
 float ylight  =   2;  // Elevation of light
 
 // game state
-point3 falcon_pos = {-2,FALCON_HEIGHT,-2};
+// falcon state
+//point3 falcon_pos = {-2,FALCON_HEIGHT,-2};
+point3 falcon_pos = {-10,FALCON_HEIGHT,-10};
 point3 falcon_vel = {0.0,0.0,0.0};
-int falcon_dir = 271; // angle from the x-axis that the falcon is pointing
+double falcon_dir = 270; // angle from the x-axis that the falcon is pointing
 double eye_height = 0.05;
+bool thrust_on = false;
+// state of planetary system
 double orbit_angle_earth = 0.0;
 double rotate_angle_earth = 0.0;
 double orbit_angle_moon = 0.0;
 double rotate_angle_moon = 0.0;
+point3 sun_pos = {0,0,0};
+point3 earth_pos = {0,0,0};
+point3 moon_pos = {0,0,0};
+bool orbit_planets = true;
+// thrust definitions
+thrust_box tbox = {{0.0,0.0,0.0},{0.0,0.0,0.0},{0.0,0.0,0.0},{0.0,0.0,0.0},{0.0,0.0,0.0},{0.0,0.0,0.0},{0.0,0.0,0.0},{0.0,0.0,0.0}};
+// state of spacetime sheet
 bool show_grid = true;
 bool show_sheet = true;
-double last_time = 0.0; // used to compute how far the falcon should travel
+double time = 0.0; // the current time
+double last_time = 0.0; // the last last
 double orb_alpha = 0.0; // the transparency of the inertial braking orb
-bool increase_orb_alpha = false;
+bool increase_orb_alpha = false; // whether to increase or decrease the orb's alpha value
 
 point3 no_translation = {0,0,0};
 point4 no_rotation = {0,0,0,0};
@@ -96,28 +119,51 @@ point3 no_scale = {1,1,1};
 point3 pts[SHEET_PTS][SHEET_PTS];
 point3 norms[SHEET_PTS][SHEET_PTS];
 
+long double GetTime()
+{
+	//  Elapsed time in seconds
+	return glutGet(GLUT_ELAPSED_TIME)/1000.0;
+}
+
 void draw_scene()
 {
 	// draw the falcon
 	point3 falcon_trans = {falcon_pos.x, falcon_pos.y, falcon_pos.z};
 	point4 falcon_rot = {0, 1, 0, falcon_dir};
 	point3 falcon_scale = {0.01, 0.01, 0.01};
-	Draw_falcon(falcon_trans, falcon_rot, falcon_scale);
+	Draw_falcon(falcon_trans, falcon_rot, falcon_scale, thrust_on, &tbox);
+	
+	// the rectangle is in falcon coordinates, so transform it to world coordinates
+	tbox.ful = ManualTransformAboutY(falcon_trans, falcon_rot, falcon_scale, tbox.ful);
+	tbox.fll = ManualTransformAboutY(falcon_trans, falcon_rot, falcon_scale, tbox.fll);
+	tbox.flr = ManualTransformAboutY(falcon_trans, falcon_rot, falcon_scale, tbox.flr);
+	tbox.fur = ManualTransformAboutY(falcon_trans, falcon_rot, falcon_scale, tbox.fur);
+	tbox.bul = ManualTransformAboutY(falcon_trans, falcon_rot, falcon_scale, tbox.bul);
+	tbox.bll = ManualTransformAboutY(falcon_trans, falcon_rot, falcon_scale, tbox.bll);
+	tbox.blr = ManualTransformAboutY(falcon_trans, falcon_rot, falcon_scale, tbox.blr);
+	tbox.bur = ManualTransformAboutY(falcon_trans, falcon_rot, falcon_scale, tbox.bur);
 	
 	// draw the sun
-	point3 sun_trans = {0,SUN_HEIGHT,0};
+	sun_pos.y = SUN_HEIGHT;
+	point3 sun_trans = sun_pos;
 	point4 sun_rots = no_rotation;
 	point3 sun_scale = {SUN_RAD,SUN_RAD,SUN_RAD};
 	Draw_Sun(sun_trans, sun_rots, sun_scale);	
 	
 	// draw the earth
-	point3 earth_trans = {-ORBIT_RAD_EARTH*KUTILS_COS(orbit_angle_earth),EARTH_HEIGHT,ORBIT_RAD_EARTH*KUTILS_SIN(orbit_angle_earth)};
+	earth_pos.x = -ORBIT_RAD_EARTH*KUTILS_COS(orbit_angle_earth);
+	earth_pos.y = EARTH_HEIGHT;
+	earth_pos.z = ORBIT_RAD_EARTH*KUTILS_SIN(orbit_angle_earth);
+	point3 earth_trans = earth_pos;
 	point4 earth_rots = {0,1,0,rotate_angle_earth};
 	point3 earth_scale = {EARTH_RAD,EARTH_RAD,EARTH_RAD};
 	Draw_Earth(earth_trans, earth_rots, earth_scale);
 	
 	// draw the moon
-	point3 moon_trans = {-ORBIT_RAD_MOON*KUTILS_COS(orbit_angle_moon),MOON_HEIGHT,ORBIT_RAD_MOON*KUTILS_SIN(orbit_angle_moon)};
+	moon_pos.x = -ORBIT_RAD_MOON*KUTILS_COS(orbit_angle_moon);
+	moon_pos.y = MOON_HEIGHT;
+	moon_pos.z = ORBIT_RAD_MOON*KUTILS_SIN(orbit_angle_moon);
+	point3 moon_trans = moon_pos;
 	point4 moon_rots = {0,1,0,orbit_angle_moon};
 	point3 moon_scale = {MOON_RAD,MOON_RAD,MOON_RAD};
 	Draw_Moon(earth_trans, moon_trans, moon_rots, moon_scale);
@@ -127,6 +173,16 @@ void draw_scene()
 	Calculate_sheet_heights(pts, sun_trans, earth_trans, moon_trans);
 	Calculate_sheet_normals(pts, norms);
 	Draw_sheet(pts, norms, show_sheet, show_grid);
+	
+	// TRANSPARENT OBJECTS AFTER THIS
+	
+	// draw the thrust
+	Draw_Thrust(time);
+	// create new thrust points if needed
+	if(thrust_on)
+		Create_Thrust(tbox, time, falcon_vel, falcon_dir);
+	// move the points making up the thrust
+	Move_Thrust(time, last_time);
 	
 	// draw inertial braking orb
 	if(orb_alpha > 0)
@@ -169,48 +225,91 @@ void set_lighting()
 	glLightfv(GL_LIGHT0,GL_POSITION,Position);
 }
 
+void collision_detect(point3 pos, point3 body_pos, double body_rad, bool buffer, double *result)
+{
+	*result = pos.y;
+	double rad_sq = body_rad * body_rad;
+	double dist_sq = pos.x*pos.x + pos.y*pos.y + pos.z*pos.z + buffer;
+	
+	if(dist_sq <= rad_sq) // check if inside the body
+	{
+		double delta_x = body_pos.x - pos.x;
+		double delta_z = body_pos.z - pos.z;
+		double xz_dist = sqrt(delta_x*delta_x + delta_z*delta_z);
+		double relative_height = rad_sq - xz_dist*xz_dist;
+		double actual_height = body_pos.y - pos.y;
+		double height_adjust = relative_height - fabs(actual_height);
+		if(actual_height < 0)
+			*result -= height_adjust;
+		else
+			*result += height_adjust;
+	}
+}
+
+double adjustment_height(point3 pos, point3 body_pos, double body_rad, double buffer)
+{
+	double adjust = 0;
+	
+	double sqrt2 = 1.414;
+	double delta_x = body_pos.x - pos.x;
+	double delta_z = body_pos.z - pos.z;
+	double xz_dist = sqrt(delta_x*delta_x + delta_z*delta_z);
+	
+	if(xz_dist < sqrt2 * body_rad)
+	{
+		adjust = (sqrt2 * body_rad) - xz_dist + buffer;
+	}
+	
+	return adjust;
+}
+
+double adjust_eye_height(double x, double y, double z)
+{
+	/*
+	point3 pos = {x, y, z};
+	double buffer = 1;
+	
+	double adjust = adjustment_height(pos, sun_pos, SUN_RAD, buffer);	
+	if(adjust > 0)
+		return adjust + y;
+		
+	adjust = adjustment_height(pos, earth_pos, EARTH_RAD, buffer);	
+	if(adjust > 0)
+		return adjust + y;
+		
+	adjust = adjustment_height(pos, moon_pos, MOON_RAD, buffer);
+	if(adjust > 0)
+		return adjust + y;
+		
+	return y;
+	*/
+	return y;
+}
+
 void set_eye_position()
 {
 
 	double dist = -1 * (FOLLOW_DIST+1.5*eye_height);
 
-	double Ex = falcon_pos.x + dist * KUTILS_COS(falcon_dir);
-	double Ey = falcon_pos.y + eye_height;
+/*	double Ex = falcon_pos.x + dist * KUTILS_COS(falcon_dir);
 	double Ez = falcon_pos.z - dist * KUTILS_SIN(falcon_dir);
+	double Ey = adjust_eye_height(Ex, falcon_pos.y + eye_height, Ez);
 	
 	double Cx = falcon_pos.x + VIEW_DIST_AHEAD * KUTILS_COS(falcon_dir);
 	double Cy = falcon_pos.y;
 	double Cz = falcon_pos.z - VIEW_DIST_AHEAD * KUTILS_SIN(falcon_dir);
-
-/*	// TOP DOWN VIEW FOR DEBUGGING
+*/
+	// TOP DOWN VIEW FOR DEBUGGING
 	double Ex = falcon_pos.x;
-	double Ey = falcon_pos.y + eye_height;
+	double Ey = falcon_pos.y + 7*eye_height;
 	double Ez = falcon_pos.z;
 	
-	double Cx = falcon_pos.x + 0.01;
+	double Cx = falcon_pos.x - 0.01;
 	double Cy = falcon_pos.y;
 	double Cz = falcon_pos.z;
-*/
+
 	gluLookAt(Ex,Ey,Ez , Cx,Cy,Cz, 0,1,0);	
 }
-/*
-void move_falcon_dist(double dist, double dir)
-{
-	printf("move_falcon_dist\n");
-	falcon_pos.x += dist * KUTILS_COS(dir);
-	falcon_pos.z -= dist * KUTILS_SIN(dir);
-}
-
-void move_falcon(double time) // time is in sec
-{
-	printf("move_falcon\n");
-	double vel = sqrt(falcon_vel.x*falcon_vel.x + falcon_vel.z*falcon_vel.z); // units per sec
-	double dist = vel * (time-last_time);
-	double dir = atan(falcon_vel.z / falcon_vel.x); // angle from the x-axis
-	
-	move_falcon_dist(dist,dir);
-}
-*/
 
 point3 find_weighted_norm()
 {
@@ -244,6 +343,20 @@ void move_falcon(double time) // time is in sec
 
 	falcon_pos.x += delta_t * falcon_vel.x;
 	falcon_pos.z += delta_t * falcon_vel.z;
+}
+
+void turn_falcon(double time)
+{	
+	if(falcon_turn != NO_TURN)
+	{
+		int dir = (falcon_turn == RIGHT_TURN) ? -1 : 1;
+		double delta_t = time - last_time;
+		double turn_dist = dir * delta_t * TURN_RATE;
+		falcon_dir += turn_dist;
+		
+		falcon_dir += 360;
+		falcon_dir = fmod(falcon_dir,360.0);
+	}
 }
 
 void increase_velocity(double amt)
@@ -320,29 +433,32 @@ void display()
  */
 void idle()
 {
-	//  Elapsed time in seconds
-	double t = glutGet(GLUT_ELAPSED_TIME)/1000.0;
+	// set the times
+	last_time = time;
+	time = GetTime();
 
 	// light orbit
-	zh = fmod(90*t,360.0);
+	zh = fmod(90*time,360.0);
 
-	// earth orbit
-	orbit_angle_earth = fmod(90*t*ORBIT_SPEED_EARTH,360.0);
+	if(orbit_planets)
+	{
+		// earth orbit
+		orbit_angle_earth = fmod(90*time*ORBIT_SPEED_EARTH,360.0);
 
-	// earth rotation
-	rotate_angle_earth = fmod(90*t,360.0);
+		// earth rotation
+		rotate_angle_earth = fmod(90*time,360.0);
 
-	// moon orbit
-	orbit_angle_moon = fmod(90*t*ORBIT_SPEED_MOON,360.0);
-
+		// moon orbit
+		orbit_angle_moon = fmod(90*time*ORBIT_SPEED_MOON,360.0);
+	}
 	// update falcon's velocity
 	update_velocity();
 
 	// move the falcon
-	move_falcon(t);
-
-	// set the last time
-	last_time = t;
+	move_falcon(time);
+	
+	// turn the falcon
+	turn_falcon(time);
 
 	// set whether we need to increase or decrease the orb alpha
 	if(increase_orb_alpha) orb_alpha += ORB_ALPHA_INC;
@@ -350,9 +466,20 @@ void idle()
 	
 	if(orb_alpha < 0) orb_alpha = 0;
 	else if(orb_alpha > ORB_ALPHA_MAX) orb_alpha = ORB_ALPHA_MAX;
-
+	
 	//  Tell GLUT it is necessary to redisplay the scene
 	glutPostRedisplay();
+}
+
+void specialup(int key, int x, int y)
+{
+	//  Right arrow key - increase angle by 5 degrees
+	if (key == GLUT_KEY_RIGHT || key == GLUT_KEY_LEFT)
+	{
+		falcon_turn = NO_TURN;
+	}
+	else if(key == GLUT_KEY_UP)
+		thrust_on = false;
 }
 
 /*
@@ -363,26 +490,25 @@ void special(int key,int x,int y)
    //  Right arrow key - increase angle by 5 degrees
    if (key == GLUT_KEY_RIGHT)
    {
-      falcon_dir -= 5;
-//      move_falcon(0);
+      //falcon_dir -= 5;
+      falcon_turn = RIGHT_TURN;
    }
    //  Left arrow key - decrease angle by 5 degrees
    else if (key == GLUT_KEY_LEFT)
    {
-      falcon_dir += 5;
-//      move_falcon(0);
+      //falcon_dir += 5;
+      falcon_turn = LEFT_TURN;
    }
    //  Up arrow key
    else if (key == GLUT_KEY_UP)
    {
       increase_velocity(SPEED_INC);
-      //move_falcon(0.1);
+      thrust_on = true;
    }
    //  Down arrow key
    else if (key == GLUT_KEY_DOWN)
    {
       increase_velocity(-SPEED_INC);
-      //move_falcon(-0.1);
    }
    //  PageUp key - increase view elevation
    else if (key == GLUT_KEY_PAGE_DOWN)
@@ -392,10 +518,13 @@ void special(int key,int x,int y)
       eye_height -= EYE_HEIGHT_INC;
    else if (key == GLUT_KEY_F1)
       distance = (distance==1) ? 5 : 1;
+      
    //  Keep angles to +/-360 degrees
-   falcon_dir %= 360;
+   //falcon_dir %= 360;
+   
    //  Update projection
    Project(fov,asp,dim);
+   
    //  Tell GLUT it is necessary to redisplay the scene
    glutPostRedisplay();
 }
@@ -405,7 +534,7 @@ void keyup(unsigned char ch,int x,int y)
 	if (ch == 32)
 	{
 		increase_orb_alpha = false;
-	}  
+	}
 }
 
 /*
@@ -434,9 +563,9 @@ void key(unsigned char ch,int x,int y)
    //  Toggle lighting
    else if (ch == 'l' || ch == 'L')
       light = 1-light;
-   //  Toggle light movement
+   //  Toggle orbiting planets
    else if (ch == 'm' || ch == 'M')
-      move = 1-move;
+      orbit_planets = !orbit_planets;
    //  Move light
    else if (ch == '<')
       zh += 1;
@@ -497,7 +626,7 @@ void key(unsigned char ch,int x,int y)
    //  Reproject
    Project(fov,asp,dim);
    //  Animate if requested
-   glutIdleFunc(move?idle:NULL);
+   //glutIdleFunc(move?idle:NULL);
    //  Tell GLUT it is necessary to redisplay the scene
    glutPostRedisplay();
 }
@@ -530,6 +659,7 @@ int main(int argc,char* argv[])
 	glutDisplayFunc(display);
 	glutReshapeFunc(reshape);
 	glutSpecialFunc(special);
+	glutSpecialUpFunc(specialup);
 	glutKeyboardFunc(key);
 	glutKeyboardUpFunc(keyup);
 	glutIdleFunc(idle);
@@ -542,6 +672,8 @@ int main(int argc,char* argv[])
 	{
 		planet_tex[i] = LoadTexBMP(planet_tex_names[i]);
 	}
+	// perform some initializations
+	Initialize_Thrust();
 	last_time = glutGet(GLUT_ELAPSED_TIME)/1000.0;
 	//  Pass control to GLUT so it can interact with the user
 	glutMainLoop();

@@ -3,6 +3,17 @@
 
 using namespace kutils;
 using namespace kdraw;
+
+point3 kdraw::ManualTransformAboutY(point3 translation, point4 rotation, point3 scale, point3 pt)
+{
+	point3 result;
+	
+	result.x =  scale.x*pt.x*KUTILS_COS(rotation.w) + scale.z*pt.z*KUTILS_SIN(rotation.w) + translation.x;
+	result.y =  scale.y*pt.y + translation.y;
+	result.z = -scale.x*pt.x*KUTILS_SIN(rotation.w) + scale.z*pt.z*KUTILS_COS(rotation.w) + translation.z;
+	
+	return result;
+}
 	 
 void kdraw::Transform(point3 *translations, point4 *rotations, point3 *scales,
 	  int ntrans, int nrots, int nscales)
