@@ -53,6 +53,7 @@ using namespace kutils;
 #define FOLLOW_DIST     0.2  // how far behind the spaceship the eye should be
 #define VIEW_DIST_AHEAD 1    // how far ahead of the spaceship the focal point is
 #define EYE_HEIGHT_INC  0.01
+#define SKYBOX_DIM		18
 
 // inertial braking orb constants
 #define ORB_ALPHA_INC	0.01
@@ -84,6 +85,7 @@ int shininess =   6;  // Shininess (power of two)
 float shinyvec[1] = {64};    // Shininess (value)
 int zh        =  0;  // Light azimuth
 float ylight  =   2;  // Elevation of light
+unsigned int stars_tex;
 
 // game state
 // falcon state
@@ -111,6 +113,9 @@ double time = 0.0; // the current time
 double last_time = 0.0; // the last last
 double orb_alpha = 0.0; // the transparency of the inertial braking orb
 bool increase_orb_alpha = false; // whether to increase or decrease the orb's alpha value
+// viewing parameters
+double Ex, Ey, Ez; // location of the camera
+double Cx, Cy, Cz; // where the camera is looking
 
 point3 no_translation = {0,0,0};
 point4 no_rotation = {0,0,0,0};
@@ -125,6 +130,106 @@ long double GetTime()
 	return glutGet(GLUT_ELAPSED_TIME)/1000.0;
 }
 
+static void Sky(double D, point3 trans)
+{
+	glPushMatrix();
+	Transform(trans, no_rotation, no_scale);
+/*
+   //  Sides
+   glBegin(GL_QUADS);
+   glColor3f(1,0,0);
+   glVertex3f(-D,-D,-D);
+   glVertex3f(+D,-D,-D);
+   glVertex3f(+D,+D,-D);
+   glVertex3f(-D,+D,-D);
+
+   glColor3f(0,0,1);
+   glVertex3f(+D,-D,-D);
+   glVertex3f(+D,-D,+D);
+   glVertex3f(+D,+D,+D);
+   glVertex3f(+D,+D,-D);
+
+   glColor3f(1,0,0);
+   glVertex3f(+D,-D,+D);
+   glVertex3f(-D,-D,+D);
+   glVertex3f(-D,+D,+D);
+   glVertex3f(+D,+D,+D);
+
+   glColor3f(0,0,1);
+   glVertex3f(-D,-D,+D);
+   glVertex3f(-D,-D,-D);
+   glVertex3f(-D,+D,-D);
+   glVertex3f(-D,+D,+D);
+   glEnd();
+
+   //  Top and bottom
+   glBegin(GL_QUADS);
+   glColor3f(0,1,0);
+   glVertex3f(+D,+D,-D);
+   glVertex3f(+D,+D,+D);
+   glVertex3f(-D,+D,+D);
+   glVertex3f(-D,+D,-D);
+
+   glColor3f(0,1,0);
+   glVertex3f(-D,-D,+D);
+   glVertex3f(+D,-D,+D);
+   glVertex3f(+D,-D,-D);
+   glVertex3f(-D,-D,-D);
+   glEnd();
+   
+*/
+   glColor3f(1,1,1);
+   glEnable(GL_TEXTURE_2D);
+
+   //  Sides
+   glBindTexture(GL_TEXTURE_2D,stars_tex);
+   glBegin(GL_QUADS);
+   glTexCoord2f(0.00,0); glVertex3f(-D,-D,-D);
+   glTexCoord2f(0.25,0); glVertex3f(+D,-D,-D);
+   glTexCoord2f(0.25,1); glVertex3f(+D,+D,-D);
+   glTexCoord2f(0.00,1); glVertex3f(-D,+D,-D);
+
+   glTexCoord2f(0.25,0); glVertex3f(+D,-D,-D);
+   glTexCoord2f(0.50,0); glVertex3f(+D,-D,+D);
+   glTexCoord2f(0.50,1); glVertex3f(+D,+D,+D);
+   glTexCoord2f(0.25,1); glVertex3f(+D,+D,-D);
+
+   glTexCoord2f(0.50,0); glVertex3f(+D,-D,+D);
+   glTexCoord2f(0.75,0); glVertex3f(-D,-D,+D);
+   glTexCoord2f(0.75,1); glVertex3f(-D,+D,+D);
+   glTexCoord2f(0.50,1); glVertex3f(+D,+D,+D);
+
+   glTexCoord2f(0.75,0); glVertex3f(-D,-D,+D);
+   glTexCoord2f(1.00,0); glVertex3f(-D,-D,-D);
+   glTexCoord2f(1.00,1); glVertex3f(-D,+D,-D);
+   glTexCoord2f(0.75,1); glVertex3f(-D,+D,+D);
+   glEnd();
+
+   //  Top and bottom
+   glBegin(GL_QUADS);
+   glTexCoord2f(0.0,0); glVertex3f(+D,+D,-D);
+   glTexCoord2f(0.5,0); glVertex3f(+D,+D,+D);
+   glTexCoord2f(0.5,1); glVertex3f(-D,+D,+D);
+   glTexCoord2f(0.0,1); glVertex3f(-D,+D,-D);
+
+   glTexCoord2f(1.0,1); glVertex3f(-D,-D,+D);
+   glTexCoord2f(0.5,1); glVertex3f(+D,-D,+D);
+   glTexCoord2f(0.5,0); glVertex3f(+D,-D,-D);
+   glTexCoord2f(1.0,0); glVertex3f(-D,-D,-D);
+   glEnd();
+
+   glDisable(GL_TEXTURE_2D);
+
+   glPopMatrix();
+}
+
+double angle_from_horiz(double x, double y, double z)
+{
+	double len = sqrt(x*x + y*y + z*z);
+	double angle = KUTILS_ASIN(y/len);
+	return angle;
+}
+
 void draw_scene()
 {
 	// draw the falcon
@@ -132,6 +237,9 @@ void draw_scene()
 	point4 falcon_rot = {0, 1, 0, falcon_dir};
 	point3 falcon_scale = {0.01, 0.01, 0.01};
 	Draw_falcon(falcon_trans, falcon_rot, falcon_scale, thrust_on, &tbox);
+	
+	// draw the skybox, centered on the falcon
+	Sky(SKYBOX_DIM, falcon_trans);
 	
 	// the rectangle is in falcon coordinates, so transform it to world coordinates
 	tbox.ful = ManualTransformAboutY(falcon_trans, falcon_rot, falcon_scale, tbox.ful);
@@ -291,14 +399,14 @@ void set_eye_position()
 
 	double dist = -1 * (FOLLOW_DIST+1.5*eye_height);
 
-/*	double Ex = falcon_pos.x + dist * KUTILS_COS(falcon_dir);
-	double Ez = falcon_pos.z - dist * KUTILS_SIN(falcon_dir);
-	double Ey = adjust_eye_height(Ex, falcon_pos.y + eye_height, Ez);
+	Ex = falcon_pos.x + dist * KUTILS_COS(falcon_dir);
+	Ez = falcon_pos.z - dist * KUTILS_SIN(falcon_dir);
+	Ey = adjust_eye_height(Ex, falcon_pos.y + eye_height, Ez);
 	
-	double Cx = falcon_pos.x + VIEW_DIST_AHEAD * KUTILS_COS(falcon_dir);
-	double Cy = falcon_pos.y;
-	double Cz = falcon_pos.z - VIEW_DIST_AHEAD * KUTILS_SIN(falcon_dir);
-*/
+	Cx = falcon_pos.x + VIEW_DIST_AHEAD * KUTILS_COS(falcon_dir);
+	Cy = falcon_pos.y;
+	Cz = falcon_pos.z - VIEW_DIST_AHEAD * KUTILS_SIN(falcon_dir);
+/*
 	// TOP DOWN VIEW FOR DEBUGGING
 	double Ex = falcon_pos.x;
 	double Ey = falcon_pos.y + 7*eye_height;
@@ -307,7 +415,7 @@ void set_eye_position()
 	double Cx = falcon_pos.x - 0.01;
 	double Cy = falcon_pos.y;
 	double Cz = falcon_pos.z;
-
+*/
 	gluLookAt(Ex,Ey,Ez , Cx,Cy,Cz, 0,1,0);	
 }
 
@@ -672,6 +780,7 @@ int main(int argc,char* argv[])
 	{
 		planet_tex[i] = LoadTexBMP(planet_tex_names[i]);
 	}
+	stars_tex = LoadTexBMP((char*)"./texs/tex_stars.bmp");
 	// perform some initializations
 	Initialize_Thrust();
 	last_time = glutGet(GLUT_ELAPSED_TIME)/1000.0;

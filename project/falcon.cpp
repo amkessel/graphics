@@ -220,6 +220,7 @@ void draw_cockpit()
 	}
 	
 	// draw the mid-cylinder	
+	glColor3f(HULL_COLOR,HULL_COLOR,HULL_COLOR);
 	double offset = R_OUTER;
 	glBindTexture(GL_TEXTURE_2D, falcon_tex[TOP_TEX]);
 	glBegin(GL_QUAD_STRIP);
@@ -316,6 +317,7 @@ void draw_forks()
 	
 	glBindTexture(GL_TEXTURE_2D, falcon_tex[FORK_TOP_TEX]); // drawing top
 	point3 norm = { 0, 1, 0 };
+	glColor3f(HULL_COLOR,HULL_COLOR,HULL_COLOR);
 	
 	glBegin(GL_POLYGON);
 	glNormal3d(norm.x, norm.y, norm.z);

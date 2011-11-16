@@ -30,6 +30,8 @@
 
 #define KUTILS_COS(x) (cos((x)*PI/180))
 #define KUTILS_SIN(x) (sin((x)*PI/180))
+#define KUTILS_ACOS(x) (acos(x)*180/PI)
+#define KUTILS_ASIN(x) (asin(x)*180/PI)
 
 namespace kutils
 {	

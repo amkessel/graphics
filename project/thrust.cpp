@@ -7,7 +7,7 @@ using namespace kdraw;
 
 #define N_PTS	200
 #define N_PTS_CREATE  10 // the number of points to create at a time
-#define POINT_SIZE	10
+#define POINT_SIZE	5
 #define THRUST_LIFETIME	2	// how many seconds a thrust point should live
 #define THRUST_EJECT_SPEED 0.1 // speed of ejected thrust particles, in units/sec
 
@@ -55,6 +55,12 @@ void Draw_Thrust(double time)
 			glBlendFunc(GL_SRC_ALPHA,GL_ONE);
 			glDepthMask(0);
 			glColor4d(r,g,b,0.5*percent);
+			
+			glPointSize(POINT_SIZE);
+			glBegin(GL_POINTS);
+			glVertex3d(pt.loc.x, pt.loc.y, pt.loc.z);
+			glEnd();
+			
 			//glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, thrustEmissiveMaterial);
 			//glColor3d(1,0,0);
 
@@ -91,7 +97,7 @@ void Draw_Thrust(double time)
 				glVertex3d(pt.loc.x-factor*normedVel.z, pt.loc.y, pt.loc.z-factor*normedVel.x);
 			}
 			*/
-			
+			/*
 			double factor = 0.1;
 			point3 nv = pt.vel; // normalized velocity vector
 			double len = sqrt(nv.x*nv.x + nv.z*nv.z);
@@ -117,8 +123,8 @@ void Draw_Thrust(double time)
 			glVertex3d(tip.x, tip.y, tip.z);
 			glVertex3d(side2.x, side2.y, side2.z);
 			glVertex3d(side1.x, side1.y, side1.z);
-			
 			glEnd();
+			*/
 			glDepthMask(1);
 			glDisable(GL_BLEND);
 			glEnable(GL_LIGHTING);
