@@ -1,7 +1,30 @@
-#include "./HW2/kutils.h"
+#include "./project/kutils.h"
 #include <float.h>
 
+#define CORONA_SPACING 0.05
+
 using namespace kutils;
+
+void TestVertex()
+{
+	for (double ph=-90;ph<90;ph+=5)
+	{
+		double rad = KUTILS_COS(ph);
+		double circum = 2*PI*rad;
+		double arc = (circum > CORONA_SPACING) ? CORONA_SPACING : circum;
+		double angle = 360*arc / circum;
+		for (double th=0;th<=360+angle;th+=angle)
+		{
+			/*
+			point3 p1 = calc_vertex(th,  ph);
+			point3 p2 = calc_vertex(th+5,ph);
+			point3 p3 = calc_vertex(th+5,ph+5);
+			point3 p4 = calc_vertex(th,  ph+5);
+			*/
+			printf("(ph: %2f th: %5f) r: %5f c: %3.3f arc: %3.3f angle: %3.3f\n", ph, th,rad,circum,arc,angle);
+		}
+	}
+}
 
 void TestInvertHue()
 {
@@ -58,5 +81,6 @@ int main(int argc, char *argv[])
 {	
 //	TestFloatMax();
 //	TestVector3();
-	TestInvertHue();
+//	TestInvertHue();
+	TestVertex();
 }

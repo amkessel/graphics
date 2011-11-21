@@ -7,7 +7,7 @@
 #include <GL/glut.h>
 #include "common.h"
 
-#define NUM_FALCON_TEXS 8
+#define NUM_FALCON_TEXS 9
 
 #define BOTTOM_TEX       0
 #define TOP_TEX          1
@@ -17,6 +17,7 @@
 #define CANOPY_FRONT_TEX 5
 #define FORK_TOP_TEX     6
 #define FORK_BOTTOM_TEX  7
+#define BREAKING_ORB_TEX  8
 
 using namespace kutils;
 

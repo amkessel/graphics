@@ -37,7 +37,8 @@ char *falcon_tex_names[] = { (char*)"./texs/tex_bottom.bmp",
 							 (char*)"./texs/tex_canopy_top.bmp",
 							 (char*)"./texs/tex_canopy_front.bmp",
 							 (char*)"./texs/tex_fork_top.bmp",
-							 (char*)"./texs/tex_fork_bottom.bmp"};
+							 (char*)"./texs/tex_fork_bottom.bmp",
+							 (char*)"./texs/tex_moon.bmp"}; // this tex just looks cool for the orb
 
 /* Takes a model coordinate and transforms it into a texture coordinate.
    Specific to mapping a 2x2 square centered on the origin to a 1x1 texture */
@@ -484,23 +485,23 @@ static void Vertex(int th,int ph)
 
 void draw_orb()
 {
-   int th,ph;
+	int th,ph;
 
-   //  Set texture
-   //glEnable(GL_TEXTURE_2D);
-   //glBindTexture(GL_TEXTURE_2D, planet_tex[tex]);
-   //  Latitude bands
-   //glColor3f(1,1,1);
-   for (ph=-90;ph<90;ph+=5)
-   {
-      glBegin(GL_QUAD_STRIP);
-      for (th=0;th<=360;th+=5)
-      {
-         Vertex(th,ph);
-         Vertex(th,ph+5);
-      }
-      glEnd();
-   }
+	//  Set texture
+	glEnable(GL_TEXTURE_2D);
+	glBindTexture(GL_TEXTURE_2D, falcon_tex[BREAKING_ORB_TEX]);	
+	//  Latitude bands
+	for (ph=-90;ph<90;ph+=5)
+	{
+		glBegin(GL_QUAD_STRIP);
+		for (th=0;th<=360;th+=5)
+		{
+			Vertex(th,ph);
+			Vertex(th,ph+5);
+		}
+		glEnd();
+	}
+	glDisable(GL_TEXTURE_2D);
 }
 
 void Draw_Braking_Orb(point3 translation, point3 scale, double alpha)
@@ -516,13 +517,10 @@ void Draw_Braking_Orb(point3 translation, point3 scale, double alpha)
 	glEnable(GL_BLEND);
 	
 	glColor4f(0.3,0.3,1,alpha);
-	//if (aone)
-		glBlendFunc(GL_SRC_ALPHA,GL_ONE);
-	//else
-	//	glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
+	glBlendFunc(GL_SRC_ALPHA,GL_ONE);
 	glDepthMask(0);
 	glEnable(GL_TEXTURE_2D);
-	
+
 	draw_orb();
 	
 	glDepthMask(1);

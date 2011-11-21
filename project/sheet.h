@@ -9,6 +9,7 @@
 #define GRID_COLOR 0.1
 
 #define GRAV_FACTOR 2.0 // factor to add emphasis to gravity well
+#define GRAV_WIDTH  2.0 // factor to widen the expanse of the gravity well
 
 #define GRAV_CUTOFF 10.0 // multiple of radius of planet afterwhich approximate potential as zero
 
@@ -20,6 +21,6 @@ void Calculate_sheet_points(point3 pts[SHEET_PTS][SHEET_PTS], point3 falcon_pos)
 
 void Calculate_sheet_normals(point3 pts[SHEET_PTS][SHEET_PTS], point3 norms[SHEET_PTS][SHEET_PTS]);
 
-void Calculate_sheet_heights(point3 pts[SHEET_PTS][SHEET_PTS], point3 sun, point3 earth, point3 moon);
+void Calculate_sheet_heights(point3 pts[SHEET_PTS][SHEET_PTS], point3 sun, point3 earth, point3 moon, point3 jupiter);
 
 #endif

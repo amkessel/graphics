@@ -2,9 +2,19 @@
  * main.cpp
  *
  * Andrew Kessel
- * Created 10/6/2011
+ * CSCI 5229 Final Project
  *
- * Main file for homework 5 (lighting)
+ * Controls:
+ * ---------
+ * Up arrow:     thrust
+ * Back arrow:   flip 180 degrees (actually implemented as thrust backwards right now)
+ * Left/Right    arrows: yaw left/right
+ * Page Up/Down: zoom in/out
+ * Space:        apply inertial braking
+ * Enter:        hyperjump forward
+ * z:            toggle spacetime sheet mode (grid/sheet/none)
+ * m:            pause planet movement
+ * p:            pointer to sun
  *
  ***************************************************/
 #include <stdio.h>
@@ -29,16 +39,22 @@ using namespace kdraw;
 using namespace kutils;
 
 // game constants
-#define SUN_HEIGHT    0.2
-#define EARTH_HEIGHT  0.1
-#define MOON_HEIGHT   0.02
-#define FALCON_HEIGHT 0.1
+#define SUN_HEIGHT     0.2
+#define EARTH_HEIGHT   0.1
+#define MOON_HEIGHT    0.02
+#define JUPITER_HEIGHT 0.12
+#define FALCON_HEIGHT  0.1
 
-#define ORBIT_RAD_EARTH 3
-#define ORBIT_RAD_MOON  0.75
+#define ORBIT_RAD_EARTH   3
+#define ORBIT_RAD_MOON    0.75
+#define ORBIT_RAD_JUPITER 6
 
-#define ORBIT_SPEED_EARTH 0.05
-#define ORBIT_SPEED_MOON  0.5
+#define ORBIT_SPEED_EARTH   0.05
+#define ORBIT_SPEED_MOON    0.5
+#define ORBIT_SPEED_JUPITER 0.025
+
+#define ROTATE_SPEED_EARTH   1
+#define ROTATE_SPEED_JUPITER 0.25
 
 // control constants
 #define SPEED_LIMIT	2 // units per second (note that the sun's radius is 1 unit)
@@ -68,8 +84,6 @@ enum turn_dir
 enum turn_dir falcon_turn;
 
 int axes=0;       //  Display axes
-//int th=-45;         //  Azimuth of view angle
-//int ph=20;         //  Elevation of view angle
 int fov=35;       //  Field of view (for perspective)
 int light=1;      //  Lighting
 double asp=1;     //  Aspect ratio
@@ -100,9 +114,12 @@ double orbit_angle_earth = 0.0;
 double rotate_angle_earth = 0.0;
 double orbit_angle_moon = 0.0;
 double rotate_angle_moon = 0.0;
+double orbit_angle_jupiter = 0.0;
+double rotate_angle_jupiter = 0.0;
 point3 sun_pos = {0,0,0};
 point3 earth_pos = {0,0,0};
 point3 moon_pos = {0,0,0};
+point3 jupiter_pos = {0,0,0};
 bool orbit_planets = true;
 // thrust definitions
 thrust_box tbox = {{0.0,0.0,0.0},{0.0,0.0,0.0},{0.0,0.0,0.0},{0.0,0.0,0.0},{0.0,0.0,0.0},{0.0,0.0,0.0},{0.0,0.0,0.0},{0.0,0.0,0.0}};
@@ -116,6 +133,7 @@ bool increase_orb_alpha = false; // whether to increase or decrease the orb's al
 // viewing parameters
 double Ex, Ey, Ez; // location of the camera
 double Cx, Cy, Cz; // where the camera is looking
+bool show_pointer = false;
 
 point3 no_translation = {0,0,0};
 point4 no_rotation = {0,0,0,0};
@@ -134,93 +152,50 @@ static void Sky(double D, point3 trans)
 {
 	glPushMatrix();
 	Transform(trans, no_rotation, no_scale);
-/*
-   //  Sides
-   glBegin(GL_QUADS);
-   glColor3f(1,0,0);
-   glVertex3f(-D,-D,-D);
-   glVertex3f(+D,-D,-D);
-   glVertex3f(+D,+D,-D);
-   glVertex3f(-D,+D,-D);
 
-   glColor3f(0,0,1);
-   glVertex3f(+D,-D,-D);
-   glVertex3f(+D,-D,+D);
-   glVertex3f(+D,+D,+D);
-   glVertex3f(+D,+D,-D);
+	glColor3f(1,1,1);
+	glEnable(GL_TEXTURE_2D);
 
-   glColor3f(1,0,0);
-   glVertex3f(+D,-D,+D);
-   glVertex3f(-D,-D,+D);
-   glVertex3f(-D,+D,+D);
-   glVertex3f(+D,+D,+D);
+	//  Sides
+	glBindTexture(GL_TEXTURE_2D,stars_tex);
+	glBegin(GL_QUADS);
+	glTexCoord2f(0,0); glVertex3f(-D,-D,-D);
+	glTexCoord2f(1,0); glVertex3f(+D,-D,-D);
+	glTexCoord2f(1,1); glVertex3f(+D,+D,-D);
+	glTexCoord2f(0,1); glVertex3f(-D,+D,-D);
 
-   glColor3f(0,0,1);
-   glVertex3f(-D,-D,+D);
-   glVertex3f(-D,-D,-D);
-   glVertex3f(-D,+D,-D);
-   glVertex3f(-D,+D,+D);
-   glEnd();
+	glTexCoord2f(0,0); glVertex3f(+D,-D,-D);
+	glTexCoord2f(1,0); glVertex3f(+D,-D,+D);
+	glTexCoord2f(1,1); glVertex3f(+D,+D,+D);
+	glTexCoord2f(0,1); glVertex3f(+D,+D,-D);
 
-   //  Top and bottom
-   glBegin(GL_QUADS);
-   glColor3f(0,1,0);
-   glVertex3f(+D,+D,-D);
-   glVertex3f(+D,+D,+D);
-   glVertex3f(-D,+D,+D);
-   glVertex3f(-D,+D,-D);
+	glTexCoord2f(0,0); glVertex3f(+D,-D,+D);
+	glTexCoord2f(1,0); glVertex3f(-D,-D,+D);
+	glTexCoord2f(1,1); glVertex3f(-D,+D,+D);
+	glTexCoord2f(0,1); glVertex3f(+D,+D,+D);
 
-   glColor3f(0,1,0);
-   glVertex3f(-D,-D,+D);
-   glVertex3f(+D,-D,+D);
-   glVertex3f(+D,-D,-D);
-   glVertex3f(-D,-D,-D);
-   glEnd();
-   
-*/
-   glColor3f(1,1,1);
-   glEnable(GL_TEXTURE_2D);
+	glTexCoord2f(0,0); glVertex3f(-D,-D,+D);
+	glTexCoord2f(1,0); glVertex3f(-D,-D,-D);
+	glTexCoord2f(1,1); glVertex3f(-D,+D,-D);
+	glTexCoord2f(0,1); glVertex3f(-D,+D,+D);
+	glEnd();
 
-   //  Sides
-   glBindTexture(GL_TEXTURE_2D,stars_tex);
-   glBegin(GL_QUADS);
-   glTexCoord2f(0.00,0); glVertex3f(-D,-D,-D);
-   glTexCoord2f(0.25,0); glVertex3f(+D,-D,-D);
-   glTexCoord2f(0.25,1); glVertex3f(+D,+D,-D);
-   glTexCoord2f(0.00,1); glVertex3f(-D,+D,-D);
+	//  Top and bottom
+	glBegin(GL_QUADS);
+	glTexCoord2f(0,0); glVertex3f(+D,+D,-D);
+	glTexCoord2f(1,0); glVertex3f(+D,+D,+D);
+	glTexCoord2f(1,1); glVertex3f(-D,+D,+D);
+	glTexCoord2f(0,1); glVertex3f(-D,+D,-D);
 
-   glTexCoord2f(0.25,0); glVertex3f(+D,-D,-D);
-   glTexCoord2f(0.50,0); glVertex3f(+D,-D,+D);
-   glTexCoord2f(0.50,1); glVertex3f(+D,+D,+D);
-   glTexCoord2f(0.25,1); glVertex3f(+D,+D,-D);
+	glTexCoord2f(1,1); glVertex3f(-D,-D,+D);
+	glTexCoord2f(0,1); glVertex3f(+D,-D,+D);
+	glTexCoord2f(0,0); glVertex3f(+D,-D,-D);
+	glTexCoord2f(1,0); glVertex3f(-D,-D,-D);
+	glEnd();
 
-   glTexCoord2f(0.50,0); glVertex3f(+D,-D,+D);
-   glTexCoord2f(0.75,0); glVertex3f(-D,-D,+D);
-   glTexCoord2f(0.75,1); glVertex3f(-D,+D,+D);
-   glTexCoord2f(0.50,1); glVertex3f(+D,+D,+D);
+	glDisable(GL_TEXTURE_2D);
 
-   glTexCoord2f(0.75,0); glVertex3f(-D,-D,+D);
-   glTexCoord2f(1.00,0); glVertex3f(-D,-D,-D);
-   glTexCoord2f(1.00,1); glVertex3f(-D,+D,-D);
-   glTexCoord2f(0.75,1); glVertex3f(-D,+D,+D);
-   glEnd();
-
-   //  Top and bottom
-   glBegin(GL_QUADS);
-   glTexCoord2f(0.0,0); glVertex3f(+D,+D,-D);
-   glTexCoord2f(0.5,0); glVertex3f(+D,+D,+D);
-   glTexCoord2f(0.5,1); glVertex3f(-D,+D,+D);
-   glTexCoord2f(0.0,1); glVertex3f(-D,+D,-D);
-
-   glTexCoord2f(1.0,1); glVertex3f(-D,-D,+D);
-   glTexCoord2f(0.5,1); glVertex3f(+D,-D,+D);
-   glTexCoord2f(0.5,0); glVertex3f(+D,-D,-D);
-   glTexCoord2f(1.0,0); glVertex3f(-D,-D,-D);
-   glEnd();
-
-   glDisable(GL_TEXTURE_2D);
-
-   glPopMatrix();
+	glPopMatrix();
 }
 
 double angle_from_horiz(double x, double y, double z)
@@ -230,6 +205,26 @@ double angle_from_horiz(double x, double y, double z)
 	return angle;
 }
 
+void draw_pointer()
+{
+	glPushMatrix();
+	Transform(falcon_pos, no_rotation, no_scale);
+
+	point3 dir = falcon_pos;
+	double lenSq = sqrt(falcon_pos.x*falcon_pos.x + falcon_pos.y*falcon_pos.y + falcon_pos.z*falcon_pos.z);
+	dir.x /= lenSq;
+	dir.y /= lenSq;
+	dir.z /= lenSq;
+
+	glColor3d(1,0,0);
+	glBegin(GL_LINES);
+	glVertex3d(-dir.x, -dir.y, -dir.z);
+	glVertex3d(0,0,0);
+	glEnd();
+	
+	glPopMatrix();
+}
+
 void draw_scene()
 {
 	// draw the falcon
@@ -237,6 +232,10 @@ void draw_scene()
 	point4 falcon_rot = {0, 1, 0, falcon_dir};
 	point3 falcon_scale = {0.01, 0.01, 0.01};
 	Draw_falcon(falcon_trans, falcon_rot, falcon_scale, thrust_on, &tbox);
+	
+	// draw pointer to sun
+	if(show_pointer)
+		draw_pointer();
 	
 	// draw the skybox, centered on the falcon
 	Sky(SKYBOX_DIM, falcon_trans);
@@ -276,9 +275,18 @@ void draw_scene()
 	point3 moon_scale = {MOON_RAD,MOON_RAD,MOON_RAD};
 	Draw_Moon(earth_trans, moon_trans, moon_rots, moon_scale);
 	
+	// draw jupiter
+	jupiter_pos.x = -ORBIT_RAD_JUPITER*KUTILS_COS(orbit_angle_jupiter);
+	jupiter_pos.y = JUPITER_HEIGHT;
+	jupiter_pos.z = ORBIT_RAD_JUPITER*KUTILS_SIN(orbit_angle_jupiter);
+	point3 jupiter_trans = jupiter_pos;
+	point4 jupiter_rots = {0,1,0,rotate_angle_jupiter};
+	point3 jupiter_scale = {JUPITER_RAD,JUPITER_RAD,JUPITER_RAD};
+	Draw_Jupiter(jupiter_trans, jupiter_rots, jupiter_scale);
+	
 	// draw the sheet
 	Calculate_sheet_points(pts, falcon_pos);
-	Calculate_sheet_heights(pts, sun_trans, earth_trans, moon_trans);
+	Calculate_sheet_heights(pts, sun_trans, earth_trans, moon_trans, jupiter_trans);
 	Calculate_sheet_normals(pts, norms);
 	Draw_sheet(pts, norms, show_sheet, show_grid);
 	
@@ -300,6 +308,9 @@ void draw_scene()
 		//point3 orb_scale = {orb_alpha*ORB_BASE_RAD, orb_alpha*ORB_BASE_RAD, orb_alpha*ORB_BASE_RAD};
 		Draw_Braking_Orb(orb_trans, orb_scale, orb_alpha);
 	}
+	
+	// draw the sun's corona
+	Draw_Corona(sun_trans, sun_rots, sun_scale);
 }
 
 void set_lighting()
@@ -309,7 +320,8 @@ void set_lighting()
 	float Diffuse[]   = {0.01*diffuse ,0.01*diffuse ,0.01*diffuse ,1.0};
 	float Specular[]  = {0.01*specular,0.01*specular,0.01*specular,1.0};
 	//  Light position
-	float Position[]  = {distance*KUTILS_COS(zh),ylight,distance*KUTILS_SIN(zh),1.0};
+	//float Position[]  = {distance*KUTILS_COS(zh),ylight,distance*KUTILS_SIN(zh),1.0};
+	float Position[] = {0,0,0};
 	//  Draw light position as ball (still no lighting here)
 	glColor3f(1,1,1);
 	point3 sphere_trans = {Position[0],Position[1],Position[2]};
@@ -354,6 +366,7 @@ void collision_detect(point3 pos, point3 body_pos, double body_rad, bool buffer,
 	}
 }
 
+// function for collision detection, but not working or used right now
 double adjustment_height(point3 pos, point3 body_pos, double body_rad, double buffer)
 {
 	double adjust = 0;
@@ -371,6 +384,7 @@ double adjustment_height(point3 pos, point3 body_pos, double body_rad, double bu
 	return adjust;
 }
 
+// function for collision detection, but not working or used right now
 double adjust_eye_height(double x, double y, double z)
 {
 	/*
@@ -554,10 +568,16 @@ void idle()
 		orbit_angle_earth = fmod(90*time*ORBIT_SPEED_EARTH,360.0);
 
 		// earth rotation
-		rotate_angle_earth = fmod(90*time,360.0);
+		rotate_angle_earth = fmod(90*time*ROTATE_SPEED_EARTH,360.0);
 
 		// moon orbit
 		orbit_angle_moon = fmod(90*time*ORBIT_SPEED_MOON,360.0);
+		
+		// jupiter orbit
+		orbit_angle_jupiter = fmod(90*time*ORBIT_SPEED_JUPITER,360.0);
+
+		// jupiter rotation
+		rotate_angle_jupiter = fmod(90*time*ROTATE_SPEED_JUPITER,360.0);
 	}
 	// update falcon's velocity
 	update_velocity();
@@ -627,9 +647,6 @@ void special(int key,int x,int y)
    else if (key == GLUT_KEY_F1)
       distance = (distance==1) ? 5 : 1;
       
-   //  Keep angles to +/-360 degrees
-   //falcon_dir %= 360;
-   
    //  Update projection
    Project(fov,asp,dim);
    
@@ -642,6 +659,10 @@ void keyup(unsigned char ch,int x,int y)
 	if (ch == 32)
 	{
 		increase_orb_alpha = false;
+	}
+	else if (ch == 'p' || ch == 'P')
+	{
+		show_pointer = false;
 	}
 }
 
@@ -662,9 +683,6 @@ void key(unsigned char ch,int x,int y)
    // Enter: jump
    else if (ch == 13)
       jump(JUMP_DIST);
-   //  Reset view angle
-   //else if (ch == '0')
-   //   th = ph = 0;
    //  Toggle axes
    else if (ch == 'x' || ch == 'X')
       axes = 1-axes;
@@ -728,6 +746,8 @@ void key(unsigned char ch,int x,int y)
    		else
    			show_sheet = show_grid = true;
    }
+	else if (ch == 'p' || ch == 'P')
+		show_pointer = true;
       
    //  Translate shininess power to value (-1 => 0)
    shinyvec[0] = shininess<0 ? 0 : pow(2.0,shininess);

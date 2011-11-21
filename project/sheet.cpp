@@ -166,18 +166,18 @@ double calculate_gravity(point3 pt, point3 body, double mass, double radius)
 	
 	double potential = 0; // default to zero
 	
-//	if(dist < radius * GRAV_CUTOFF)
-//	{
-		double width = 1/radius;
+	if(dist < radius * GRAV_CUTOFF)
+	{
+		double width = 1/(radius*GRAV_WIDTH);
 		double depth = mass;
 	
 		potential = depth / exp(width*dist*dist);
-//	}
+	}
 	
 	return potential;
 }
 
-void Calculate_sheet_heights(point3 pts[SHEET_PTS][SHEET_PTS], point3 sun, point3 earth, point3 moon)
+void Calculate_sheet_heights(point3 pts[SHEET_PTS][SHEET_PTS], point3 sun, point3 earth, point3 moon, point3 jupiter)
 {
 	moon.x += earth.x;
 	moon.z += earth.z;
@@ -191,8 +191,9 @@ void Calculate_sheet_heights(point3 pts[SHEET_PTS][SHEET_PTS], point3 sun, point
 			double sun_grav   = calculate_gravity(pt, sun,   SUN_MASS, SUN_RAD);
 			double earth_grav = calculate_gravity(pt, earth, EARTH_MASS, EARTH_RAD);
 			double moon_grav  = calculate_gravity(pt, moon, MOON_MASS, MOON_RAD);
+			double jupiter_grav = calculate_gravity(pt, jupiter, JUPITER_MASS, JUPITER_RAD);
 			
-			pts[i][j].y = 0 - sun_grav - earth_grav - moon_grav;
+			pts[i][j].y = 0 - sun_grav - earth_grav - moon_grav - jupiter_grav;
 			pts[i][j].y *= GRAV_FACTOR;
 		}
 	}
