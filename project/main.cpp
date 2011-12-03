@@ -38,29 +38,35 @@
 using namespace kdraw;
 using namespace kutils;
 
-// game constants
+// planetary constants
 #define SUN_HEIGHT     0.2
 #define EARTH_HEIGHT   0.1
 #define MOON_HEIGHT    0.02
 #define JUPITER_HEIGHT 0.12
+#define COMET_HEIGHT   0.02
 #define FALCON_HEIGHT  0.1
 
 #define ORBIT_RAD_EARTH   3
 #define ORBIT_RAD_MOON    0.75
 #define ORBIT_RAD_JUPITER 6
+#define ORBIT_RAD_COMET   5
 
 #define ORBIT_SPEED_EARTH   0.05
 #define ORBIT_SPEED_MOON    0.5
 #define ORBIT_SPEED_JUPITER 0.025
+#define ORBIT_SPEED_COMET   0.35
 
 #define ROTATE_SPEED_EARTH   1
 #define ROTATE_SPEED_JUPITER 0.25
+
+// animation constants
+#define JUMP_DURATION 1 // seconds
+#define JUMP_DIST	1   // how far to jump ahead
 
 // control constants
 #define SPEED_LIMIT	2 // units per second (note that the sun's radius is 1 unit)
 #define SPEED_INC	0.01 // how much to increase the speed by per key hit
 #define BRAKE_INC	0.9 // percentage of speed to reduce to per key hit
-#define JUMP_DIST	1 // how far to jump ahead
 #define TURN_RATE	100 // the degrees per second that the falcon can turn
 
 #define GRAV_STRENGTH 0.05 // how much effect gravity has on the velocity
@@ -70,6 +76,7 @@ using namespace kutils;
 #define VIEW_DIST_AHEAD 1    // how far ahead of the spaceship the focal point is
 #define EYE_HEIGHT_INC  0.01
 #define SKYBOX_DIM		18
+#define FALCON_SCALE    0.01
 
 // inertial braking orb constants
 #define ORB_ALPHA_INC	0.01
@@ -116,10 +123,12 @@ double orbit_angle_moon = 0.0;
 double rotate_angle_moon = 0.0;
 double orbit_angle_jupiter = 0.0;
 double rotate_angle_jupiter = 0.0;
+double orbit_angle_comet = 0.0;
 point3 sun_pos = {0,0,0};
 point3 earth_pos = {0,0,0};
 point3 moon_pos = {0,0,0};
 point3 jupiter_pos = {0,0,0};
+point3 comet_pos = {0,0,0};
 bool orbit_planets = true;
 // thrust definitions
 thrust_box tbox = {{0.0,0.0,0.0},{0.0,0.0,0.0},{0.0,0.0,0.0},{0.0,0.0,0.0},{0.0,0.0,0.0},{0.0,0.0,0.0},{0.0,0.0,0.0},{0.0,0.0,0.0}};
@@ -134,6 +143,12 @@ bool increase_orb_alpha = false; // whether to increase or decrease the orb's al
 double Ex, Ey, Ez; // location of the camera
 double Cx, Cy, Cz; // where the camera is looking
 bool show_pointer = false;
+// animation parameters
+bool lock_controls = false;
+bool jumping = false;
+double jump_start_time = 0.0;
+point3 falcon_jump_start_pos;
+double falcon_scale_factor = 1; // stretches the falcon during a jump
 
 point3 no_translation = {0,0,0};
 point4 no_rotation = {0,0,0,0};
@@ -142,11 +157,9 @@ point3 no_scale = {1,1,1};
 point3 pts[SHEET_PTS][SHEET_PTS];
 point3 norms[SHEET_PTS][SHEET_PTS];
 
-long double GetTime()
-{
-	//  Elapsed time in seconds
-	return glutGet(GLUT_ELAPSED_TIME)/1000.0;
-}
+/*********************************
+ * DRAWING FUNCTIONS
+ *********************************/
 
 static void Sky(double D, point3 trans)
 {
@@ -160,24 +173,24 @@ static void Sky(double D, point3 trans)
 	glBindTexture(GL_TEXTURE_2D,stars_tex);
 	glBegin(GL_QUADS);
 	glTexCoord2f(0,0); glVertex3f(-D,-D,-D);
-	glTexCoord2f(1,0); glVertex3f(+D,-D,-D);
-	glTexCoord2f(1,1); glVertex3f(+D,+D,-D);
-	glTexCoord2f(0,1); glVertex3f(-D,+D,-D);
+	glTexCoord2f(3,0); glVertex3f(+D,-D,-D);
+	glTexCoord2f(3,3); glVertex3f(+D,+D,-D);
+	glTexCoord2f(0,3); glVertex3f(-D,+D,-D);
 
 	glTexCoord2f(0,0); glVertex3f(+D,-D,-D);
-	glTexCoord2f(1,0); glVertex3f(+D,-D,+D);
-	glTexCoord2f(1,1); glVertex3f(+D,+D,+D);
-	glTexCoord2f(0,1); glVertex3f(+D,+D,-D);
+	glTexCoord2f(3,0); glVertex3f(+D,-D,+D);
+	glTexCoord2f(3,3); glVertex3f(+D,+D,+D);
+	glTexCoord2f(0,3); glVertex3f(+D,+D,-D);
 
 	glTexCoord2f(0,0); glVertex3f(+D,-D,+D);
-	glTexCoord2f(1,0); glVertex3f(-D,-D,+D);
-	glTexCoord2f(1,1); glVertex3f(-D,+D,+D);
-	glTexCoord2f(0,1); glVertex3f(+D,+D,+D);
+	glTexCoord2f(3,0); glVertex3f(-D,-D,+D);
+	glTexCoord2f(3,3); glVertex3f(-D,+D,+D);
+	glTexCoord2f(0,3); glVertex3f(+D,+D,+D);
 
 	glTexCoord2f(0,0); glVertex3f(-D,-D,+D);
-	glTexCoord2f(1,0); glVertex3f(-D,-D,-D);
-	glTexCoord2f(1,1); glVertex3f(-D,+D,-D);
-	glTexCoord2f(0,1); glVertex3f(-D,+D,+D);
+	glTexCoord2f(3,0); glVertex3f(-D,-D,-D);
+	glTexCoord2f(3,3); glVertex3f(-D,+D,-D);
+	glTexCoord2f(0,3); glVertex3f(-D,+D,+D);
 	glEnd();
 
 	//  Top and bottom
@@ -196,13 +209,6 @@ static void Sky(double D, point3 trans)
 	glDisable(GL_TEXTURE_2D);
 
 	glPopMatrix();
-}
-
-double angle_from_horiz(double x, double y, double z)
-{
-	double len = sqrt(x*x + y*y + z*z);
-	double angle = KUTILS_ASIN(y/len);
-	return angle;
 }
 
 void draw_pointer()
@@ -230,17 +236,9 @@ void draw_scene()
 	// draw the falcon
 	point3 falcon_trans = {falcon_pos.x, falcon_pos.y, falcon_pos.z};
 	point4 falcon_rot = {0, 1, 0, falcon_dir};
-	point3 falcon_scale = {0.01, 0.01, 0.01};
+	point3 falcon_scale = {falcon_scale_factor*FALCON_SCALE, FALCON_SCALE, FALCON_SCALE};
 	Draw_falcon(falcon_trans, falcon_rot, falcon_scale, thrust_on, &tbox);
-	
-	// draw pointer to sun
-	if(show_pointer)
-		draw_pointer();
-	
-	// draw the skybox, centered on the falcon
-	Sky(SKYBOX_DIM, falcon_trans);
-	
-	// the rectangle is in falcon coordinates, so transform it to world coordinates
+	// the thrust rectangle is in falcon coordinates, so transform it to world coordinates
 	tbox.ful = ManualTransformAboutY(falcon_trans, falcon_rot, falcon_scale, tbox.ful);
 	tbox.fll = ManualTransformAboutY(falcon_trans, falcon_rot, falcon_scale, tbox.fll);
 	tbox.flr = ManualTransformAboutY(falcon_trans, falcon_rot, falcon_scale, tbox.flr);
@@ -249,6 +247,14 @@ void draw_scene()
 	tbox.bll = ManualTransformAboutY(falcon_trans, falcon_rot, falcon_scale, tbox.bll);
 	tbox.blr = ManualTransformAboutY(falcon_trans, falcon_rot, falcon_scale, tbox.blr);
 	tbox.bur = ManualTransformAboutY(falcon_trans, falcon_rot, falcon_scale, tbox.bur);
+	
+	// draw pointer to sun
+	if(show_pointer)
+		draw_pointer();
+	
+	// draw the skybox, centered on the falcon
+	point3 eye_pos = {Ex,Ey,Ez};
+	Sky(SKYBOX_DIM, eye_pos);
 	
 	// draw the sun
 	sun_pos.y = SUN_HEIGHT;
@@ -283,6 +289,15 @@ void draw_scene()
 	point4 jupiter_rots = {0,1,0,rotate_angle_jupiter};
 	point3 jupiter_scale = {JUPITER_RAD,JUPITER_RAD,JUPITER_RAD};
 	Draw_Jupiter(jupiter_trans, jupiter_rots, jupiter_scale);
+
+	// draw the comet
+	comet_pos.x = -ORBIT_RAD_COMET*KUTILS_COS(orbit_angle_comet);
+	comet_pos.y = COMET_HEIGHT;
+	comet_pos.z = ORBIT_RAD_COMET*KUTILS_SIN(orbit_angle_comet);
+	point3 comet_trans = comet_pos;
+	point4 comet_rots = no_rotation;
+	point3 comet_scale = {COMET_RAD,COMET_RAD,COMET_RAD};
+	Draw_Comet(comet_trans, comet_rots, comet_scale);
 	
 	// draw the sheet
 	Calculate_sheet_points(pts, falcon_pos);
@@ -345,6 +360,10 @@ void set_lighting()
 	glLightfv(GL_LIGHT0,GL_POSITION,Position);
 }
 
+/****************************
+ * COLLISION DETECTION
+ ****************************/
+
 void collision_detect(point3 pos, point3 body_pos, double body_rad, bool buffer, double *result)
 {
 	*result = pos.y;
@@ -383,6 +402,10 @@ double adjustment_height(point3 pos, point3 body_pos, double body_rad, double bu
 	
 	return adjust;
 }
+
+/***********************************
+ * CAMERA FUNCTIONS
+ ***********************************/
 
 // function for collision detection, but not working or used right now
 double adjust_eye_height(double x, double y, double z)
@@ -431,6 +454,23 @@ void set_eye_position()
 	double Cz = falcon_pos.z;
 */
 	gluLookAt(Ex,Ey,Ez , Cx,Cy,Cz, 0,1,0);	
+}
+
+/******************************
+ * HELPER FUNCTIONS
+ ******************************/
+
+long double GetTime()
+{
+	//  Elapsed time in seconds
+	return glutGet(GLUT_ELAPSED_TIME)/1000.0;
+}
+
+double angle_from_horiz(double x, double y, double z)
+{
+	double len = sqrt(x*x + y*y + z*z);
+	double angle = KUTILS_ASIN(y/len);
+	return angle;
 }
 
 point3 find_weighted_norm()
@@ -498,11 +538,45 @@ void brake(double percent)
 	falcon_vel.z *= percent;
 }
 
-void jump(double dist)
+void animate_jump()
 {
-	falcon_pos.x += dist * KUTILS_COS(falcon_dir);
-	falcon_pos.z -= dist * KUTILS_SIN(falcon_dir);
+	double delta_t = GetTime() - jump_start_time;
+	
+	// stopping case
+	if (delta_t >= JUMP_DURATION)
+	{
+		falcon_vel.x = 0;
+		falcon_vel.y = 0;
+		falcon_vel.z = 0;
+		
+		falcon_scale_factor = 1;
+		lock_controls = false;
+		jumping = false;
+	}
+	else
+	{
+		double dist = JUMP_DIST * delta_t / JUMP_DURATION;
+		
+		falcon_pos.x = falcon_jump_start_pos.x + dist * KUTILS_COS(falcon_dir);
+		falcon_pos.z = falcon_jump_start_pos.z - dist * KUTILS_SIN(falcon_dir);
+		
+		falcon_scale_factor = (delta_t <= JUMP_DURATION/2.0)
+							? (dist / FALCON_SCALE)
+							: ((JUMP_DIST - dist) / FALCON_SCALE);
+	}
 }
+
+void jump()
+{
+	jump_start_time = GetTime();
+	falcon_jump_start_pos = falcon_pos;
+	lock_controls = true;
+	jumping = true;
+}
+
+/******************************
+ * OPENGL FUNCTIONS
+ ******************************/
 
 /*
  *  OpenGL (GLUT) calls this routine to display the scene
@@ -578,15 +652,22 @@ void idle()
 
 		// jupiter rotation
 		rotate_angle_jupiter = fmod(90*time*ROTATE_SPEED_JUPITER,360.0);
+		
+		// comet orbit
+		orbit_angle_comet = fmod(90*time*ORBIT_SPEED_COMET,360.0);
 	}
 	// update falcon's velocity
 	update_velocity();
 
-	// move the falcon
-	move_falcon(time);
-	
-	// turn the falcon
-	turn_falcon(time);
+	if(jumping)
+		animate_jump();
+	else
+	{
+		// move the falcon
+		move_falcon(time);
+		// turn the falcon
+		turn_falcon(time);
+	}
 
 	// set whether we need to increase or decrease the orb alpha
 	if(increase_orb_alpha) orb_alpha += ORB_ALPHA_INC;
@@ -628,13 +709,13 @@ void special(int key,int x,int y)
       falcon_turn = LEFT_TURN;
    }
    //  Up arrow key
-   else if (key == GLUT_KEY_UP)
+   else if (key == GLUT_KEY_UP && !lock_controls)
    {
       increase_velocity(SPEED_INC);
       thrust_on = true;
    }
    //  Down arrow key
-   else if (key == GLUT_KEY_DOWN)
+   else if (key == GLUT_KEY_DOWN && !lock_controls)
    {
       increase_velocity(-SPEED_INC);
    }
@@ -656,6 +737,7 @@ void special(int key,int x,int y)
 
 void keyup(unsigned char ch,int x,int y)
 {
+	// Space bar
 	if (ch == 32)
 	{
 		increase_orb_alpha = false;
@@ -681,8 +763,8 @@ void key(unsigned char ch,int x,int y)
       increase_orb_alpha = true;
    }  
    // Enter: jump
-   else if (ch == 13)
-      jump(JUMP_DIST);
+   else if (ch == 13 && !lock_controls)
+      jump();
    //  Toggle axes
    else if (ch == 'x' || ch == 'X')
       axes = 1-axes;

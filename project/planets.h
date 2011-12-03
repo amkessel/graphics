@@ -17,6 +17,7 @@
 #define EARTH_RAD   0.2
 #define MOON_RAD    0.05
 #define JUPITER_RAD 0.5
+#define COMET_RAD   0.01
 
 #define SUN_MASS     1
 #define EARTH_MASS   0.2
@@ -41,6 +42,8 @@ void Draw_Moon(point3 earth_trans, point3 translation, point4 rotation, point3 s
 void Draw_Jupiter(point3 translation, point4 rotation, point3 scale);
 
 void Draw_Comet(point3 translation, point4 rotation, point3 scale);
+
+void Draw_CometTail(point3 translation, point4 rotation, point3 scale);
 
 void Draw_Corona(point3 translation, point4 rotation, point3 scale);
 

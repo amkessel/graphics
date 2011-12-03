@@ -129,6 +129,29 @@ void Draw_Jupiter(point3 translation, point4 rotation, point3 scale)
 
 void Draw_Comet(point3 translation, point4 rotation, point3 scale)
 {
+	// save the current transformation
+	glPushMatrix();
+	
+	// perform our own transformation
+	Transform(translation, rotation, scale);
+	
+	draw_planet(SUN_TEX); // sun tex will be fine for this
+	
+	// reset the old transformation
+	glPopMatrix();
+}
+
+void Draw_CometTail(point3 translation, point4 rotation, point3 scale)
+{
+	// save the current transformation
+	glPushMatrix();
+	
+	// perform our own transformation
+	Transform(translation, rotation, scale);
+	
+	
+	// reset the old transformation
+	glPopMatrix();
 }
 
 void Draw_Corona(point3 translation, point4 rotation, point3 scale)

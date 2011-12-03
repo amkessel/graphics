@@ -71,6 +71,7 @@ void Draw_sheet(point3 pts[SHEET_PTS][SHEET_PTS], point3 norms[SHEET_PTS][SHEET_
 				glVertex3d(p_i_jm1.x,   p_i_jm1.y,   p_i_jm1.z);
 				glVertex3d(p_im1_jm1.x, p_im1_jm1.y, p_im1_jm1.z);
 				glVertex3d(p_im1_j.x,   p_im1_j.y,   p_im1_j.z);
+				glVertex3d(p_i_j.x,     p_i_j.y,     p_i_j.z);
 				glEnd();
 			}
 		}
