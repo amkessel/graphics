@@ -51,13 +51,13 @@ using namespace kutils;
 #define ORBIT_RAD_JUPITER 6
 #define ORBIT_RAD_COMET   5
 
-#define ORBIT_SPEED_EARTH   0.05
-#define ORBIT_SPEED_MOON    0.5
-#define ORBIT_SPEED_JUPITER 0.025
-#define ORBIT_SPEED_COMET   0.35
+#define ORBIT_SPEED_EARTH   10  // degrees/second
+#define ORBIT_SPEED_MOON    20   // degrees/second
+#define ORBIT_SPEED_JUPITER 5 // degrees/second
+#define ORBIT_SPEED_COMET   1  // degrees/second
 
-#define ROTATE_SPEED_EARTH   1
-#define ROTATE_SPEED_JUPITER 0.25
+#define ROTATE_SPEED_EARTH   70    // degrees/second
+#define ROTATE_SPEED_JUPITER 20 // degrees/second
 
 // animation constants
 #define JUMP_DURATION 1 // seconds
@@ -114,12 +114,12 @@ int diffuse   = 50;  // Diffuse intensity (%)
 int specular  = 100;  // Specular intensity (%)
 int shininess =   6;  // Shininess (power of two)
 float shinyvec[1] = {64};    // Shininess (value)
-int zh        =  0;  // Light azimuth
 float ylight  =   2;  // Elevation of light
 unsigned int stars_tex;
 
 // game state
-bool pause = false;
+bool pause_planets = false;
+bool pause_falcon = false;
 // falcon state
 //point3 falcon_pos = {-2,FALCON_HEIGHT,-2};
 point3 falcon_pos = {-10,FALCON_HEIGHT,-10};
@@ -153,6 +153,7 @@ bool increase_orb_alpha = false; // whether to increase or decrease the orb's al
 double Ex, Ey, Ez; // location of the camera
 double Cx, Cy, Cz; // where the camera is looking
 bool show_pointer = false;
+point3 *ref_eye_pos = &falcon_pos;
 // animation parameters
 bool lock_controls = false;
 anim_type animation = NO_ANIM;
@@ -160,6 +161,7 @@ double anim_start_time = 0.0;
 double flip_start_time = 0.0;
 double roll_start_time = 0.0;
 point3 falcon_jump_start_pos;
+point3 jump_eye_pos;
 double falcon_scale_factor = 1; // stretches the falcon during a jump
 double falcon_flip_angle = 0.0;
 double falcon_roll_angle = 0.0;
@@ -518,12 +520,16 @@ void brake(double percent)
 	falcon_vel.z *= percent;
 }
 
-void start_anim(anim_type type, bool toggle_pause)
+void start_anim(anim_type type)
 {
 	anim_start_time = GetTime();
 	falcon_jump_start_pos = falcon_pos;
+	if(type == JUMP)
+	{
+		jump_eye_pos = falcon_jump_start_pos;
+		ref_eye_pos = &jump_eye_pos;
+	}
 	lock_controls = true;
-	if(toggle_pause) pause = !pause;
 	animation = type;
 }
 
@@ -533,8 +539,9 @@ void end_anim()
 	falcon_flip_angle = 0.0;
 	falcon_roll_angle = 0.0;
 	falcon_eye_angle = 0.0;
+	ref_eye_pos = &falcon_pos;
 	lock_controls = false;
-	pause = false;
+	pause_planets = false;
 	animation = NO_ANIM;
 }
 
@@ -561,6 +568,14 @@ void animate_jump()
 		falcon_scale_factor = (delta_t <= JUMP_DURATION/2.0)
 							? (dist / FALCON_SCALE)
 							: ((JUMP_DIST - dist) / FALCON_SCALE);
+							
+		if(delta_t >= JUMP_DURATION/2.0)
+		{
+			double delta_t_eye = delta_t - JUMP_DURATION / 2.0;
+			double eye_dist = JUMP_DIST * delta_t_eye / (JUMP_DURATION/2.0);
+			jump_eye_pos.x = falcon_jump_start_pos.x + eye_dist * KUTILS_COS(falcon_dir);
+			jump_eye_pos.z = falcon_jump_start_pos.z - eye_dist * KUTILS_SIN(falcon_dir);
+		}
 	}
 }
 
@@ -571,7 +586,7 @@ void animate_flip()
 	// stopping case
 	if (delta_t >= FLIP_DURATION)
 	{
-		start_anim(EYE_ROT, false);
+		start_anim(EYE_ROT);
 	}
 	else
 	{
@@ -632,18 +647,18 @@ void set_eye_position()
 {
 	double dist = -1 * (FOLLOW_DIST+1.5*eye_height);
 
-	Ex = falcon_pos.x + dist * KUTILS_COS(falcon_dir);
-	Ez = falcon_pos.z - dist * KUTILS_SIN(falcon_dir);
-	Ey = adjust_eye_height(Ex, falcon_pos.y + eye_height, Ez);
+	Ex = ref_eye_pos->x + dist * KUTILS_COS(falcon_dir);
+	Ez = ref_eye_pos->z - dist * KUTILS_SIN(falcon_dir);
+	Ey = adjust_eye_height(Ex, ref_eye_pos->y + eye_height, Ez);
 	
-	Cx = falcon_pos.x + VIEW_DIST_AHEAD * KUTILS_COS(falcon_dir);
-	Cy = falcon_pos.y;
-	Cz = falcon_pos.z - VIEW_DIST_AHEAD * KUTILS_SIN(falcon_dir);
+	Cx = ref_eye_pos->x + VIEW_DIST_AHEAD * KUTILS_COS(falcon_dir);
+	Cy = ref_eye_pos->y;
+	Cz = ref_eye_pos->z - VIEW_DIST_AHEAD * KUTILS_SIN(falcon_dir);
 	
 	if(falcon_eye_angle != 0)
 	{
 		point2 target = {Ex, Ez};
-		point2 reference = {falcon_pos.x, falcon_pos.z};
+		point2 reference = {ref_eye_pos->x, ref_eye_pos->z};
 		point2 result;
 		rotate_about_point(target, reference, falcon_eye_angle, &result);
 		Ex = result.x;
@@ -711,30 +726,43 @@ void idle()
 	// set the times
 	last_time = time;
 	time = GetTime();
+	double delta_t = time - last_time;
 
-	// light orbit
-	zh = fmod(90*time,360.0);
-
-	if(!pause)
+	if(!pause_planets)
 	{
 		// earth orbit
-		orbit_angle_earth = fmod(90*time*ORBIT_SPEED_EARTH,360.0);
+		//orbit_angle_earth = fmod(90*time*ORBIT_SPEED_EARTH,360.0);
+		orbit_angle_earth += delta_t * ORBIT_SPEED_EARTH;
+		orbit_angle_earth = fmod(orbit_angle_earth,360.0);
 
 		// earth rotation
-		rotate_angle_earth = fmod(90*time*ROTATE_SPEED_EARTH,360.0);
+		//rotate_angle_earth = fmod(90*time*ROTATE_SPEED_EARTH,360.0);
+		rotate_angle_earth += delta_t * ROTATE_SPEED_EARTH;
+		rotate_angle_earth = fmod(rotate_angle_earth,360.0);
 
 		// moon orbit
-		orbit_angle_moon = fmod(90*time*ORBIT_SPEED_MOON,360.0);
+		//orbit_angle_moon = fmod(90*time*ORBIT_SPEED_MOON,360.0);
+		orbit_angle_moon += delta_t * ORBIT_SPEED_MOON;
+		orbit_angle_moon = fmod(orbit_angle_moon,360.0);		
 		
 		// jupiter orbit
-		orbit_angle_jupiter = fmod(90*time*ORBIT_SPEED_JUPITER,360.0);
+		//orbit_angle_jupiter = fmod(90*time*ORBIT_SPEED_JUPITER,360.0);
+		orbit_angle_jupiter += delta_t * ORBIT_SPEED_JUPITER;
+		orbit_angle_jupiter = fmod(orbit_angle_jupiter,360.0);
 
 		// jupiter rotation
-		rotate_angle_jupiter = fmod(90*time*ROTATE_SPEED_JUPITER,360.0);
+		//rotate_angle_jupiter = fmod(90*time*ROTATE_SPEED_JUPITER,360.0);
+		rotate_angle_jupiter += delta_t * ROTATE_SPEED_JUPITER;
+		rotate_angle_jupiter = fmod(rotate_angle_jupiter,360.0);
 		
 		// comet orbit
-		orbit_angle_comet = fmod(90*time*ORBIT_SPEED_COMET,360.0);
-		
+		//orbit_angle_comet = fmod(90*time*ORBIT_SPEED_COMET,360.0);
+		orbit_angle_comet += delta_t * ORBIT_SPEED_COMET;
+		orbit_angle_comet = fmod(orbit_angle_comet,360.0);
+	}
+	
+	if(!pause_falcon)
+	{	
 		// update falcon's velocity
 		update_velocity();
 		
@@ -784,43 +812,43 @@ void specialup(int key, int x, int y)
  */
 void special(int key,int x,int y)
 {
-   //  Right arrow key - increase angle by 5 degrees
-   if (key == GLUT_KEY_RIGHT)
-   {
-      //falcon_dir -= 5;
-      falcon_turn = RIGHT_TURN;
-   }
-   //  Left arrow key - decrease angle by 5 degrees
-   else if (key == GLUT_KEY_LEFT)
-   {
-      //falcon_dir += 5;
-      falcon_turn = LEFT_TURN;
-   }
-   //  Up arrow key
-   else if (key == GLUT_KEY_UP && !lock_controls)
-   {
-      increase_velocity(SPEED_INC);
-      thrust_on = true;
-   }
-   //  Down arrow key
-   else if (key == GLUT_KEY_DOWN && !lock_controls)
-   {
-      start_anim(FLIP, false);
-   }
-   //  PageUp key - increase view elevation
-   else if (key == GLUT_KEY_PAGE_DOWN)
-      eye_height += EYE_HEIGHT_INC;
-   //  PageDown key - decrease view elevation
-   else if (key == GLUT_KEY_PAGE_UP)
-      eye_height -= EYE_HEIGHT_INC;
-   else if (key == GLUT_KEY_F1)
-      distance = (distance==1) ? 5 : 1;
-      
-   //  Update projection
-   Project(fov,asp,dim);
-   
-   //  Tell GLUT it is necessary to redisplay the scene
-   glutPostRedisplay();
+	//  Right arrow key - increase angle by 5 degrees
+	if (key == GLUT_KEY_RIGHT && !lock_controls)
+	{
+		//falcon_dir -= 5;
+		falcon_turn = RIGHT_TURN;
+	}
+	//  Left arrow key - decrease angle by 5 degrees
+	else if (key == GLUT_KEY_LEFT && !lock_controls)
+	{
+		//falcon_dir += 5;
+		falcon_turn = LEFT_TURN;
+	}
+	//  Up arrow key
+	else if (key == GLUT_KEY_UP && !lock_controls)
+	{
+		increase_velocity(SPEED_INC);
+		thrust_on = true;
+	}
+	//  Down arrow key
+	else if (key == GLUT_KEY_DOWN && !lock_controls)
+	{
+		start_anim(FLIP);
+	}
+	//  PageUp key - increase view elevation
+	else if (key == GLUT_KEY_PAGE_DOWN)
+		eye_height += EYE_HEIGHT_INC;
+	//  PageDown key - decrease view elevation
+	else if (key == GLUT_KEY_PAGE_UP)
+		eye_height -= EYE_HEIGHT_INC;
+	else if (key == GLUT_KEY_F1)
+		distance = (distance==1) ? 5 : 1;
+
+	//  Update projection
+	Project(fov,asp,dim);
+
+	//  Tell GLUT it is necessary to redisplay the scene
+	glutPostRedisplay();
 }
 
 void keyup(unsigned char ch,int x,int y)
@@ -841,90 +869,87 @@ void keyup(unsigned char ch,int x,int y)
  */
 void key(unsigned char ch,int x,int y)
 {
-   //  Exit on ESC
-   if (ch == 27)
-      exit(0);
-   // Space bar: brake
-   else if (ch == 32)
-   {
-      brake(BRAKE_INC);
-      increase_orb_alpha = true;
-   }  
-   // Enter: jump
-   else if (ch == 13 && !lock_controls)
-      start_anim(JUMP, true);
-   //  Toggle lighting
-   else if (ch == 'l' || ch == 'L')
-      light = 1-light;
-   //  Toggle orbiting planets
-   else if (ch == 'm' || ch == 'M')
-      //orbit_planets = !orbit_planets;
-      pause = !pause;
-   //  Move light
-   else if (ch == '<')
-      zh += 1;
-   else if (ch == '>')
-      zh -= 1;
-   //  Change field of view angle
-   else if (ch == '-' && ch>1)
-      fov--;
-   else if (ch == '+' && ch<179)
-      fov++;
-   //  Light elevation
-   else if (ch=='[')
-      ylight -= 0.1;
-   else if (ch==']')
-      ylight += 0.1;
-   //  Ambient level
-   else if (ch=='a' && ambient>0)
-      ambient -= 5;
-   else if (ch=='A' && ambient<100)
-      ambient += 5;
-   //  Diffuse level
-   else if (ch=='d' && diffuse>0)
-      diffuse -= 5;
-   else if (ch=='D' && diffuse<100)
-      diffuse += 5;
-   //  Specular level
-   else if (ch=='s' && specular>0)
-      specular -= 5;
-   else if (ch=='S' && specular<100)
-      specular += 5;
-   //  Emission level
-   else if (ch=='e' && emission>0)
-      emission -= 5;
-   else if (ch=='E' && emission<100)
-      emission += 5;
-   //  Shininess level
-   else if (ch=='n' && shininess>-1)
-      shininess -= 1;
-   else if (ch=='N' && shininess<7)
-      shininess += 1;
-   else if (ch=='z')
-   {
-   		if(show_sheet && show_grid)
-   			show_sheet = false;
-   		else if(!show_sheet && show_grid)
-   		{
-   			show_sheet = true;
-   			show_grid = false;
-   		}
-   		else if(show_sheet && !show_grid)
-   			show_sheet = false;
-   		else
-   			show_sheet = show_grid = true;
-   }
+	//  Exit on ESC
+	if (ch == 27)
+		exit(0);
+	// Space bar: brake
+	else if (ch == 32)
+	{
+		brake(BRAKE_INC);
+		increase_orb_alpha = true;
+	}  
+	// Enter: jump
+	else if (ch == 13 && !lock_controls)
+	{
+		pause_planets = true;
+		start_anim(JUMP);
+	}
+	//  Toggle lighting
+	else if (ch == 'l' || ch == 'L')
+		light = 1-light;
+	//  Toggle orbiting planets
+	else if (ch == 'm' || ch == 'M')
+		pause_planets = !pause_planets;
+	//  Change field of view angle
+	else if (ch == '-' && ch>1)
+		fov--;
+	else if (ch == '+' && ch<179)
+		fov++;
+	//  Light elevation
+	else if (ch=='[')
+		ylight -= 0.1;
+	else if (ch==']')
+		ylight += 0.1;
+	//  Ambient level
+	else if (ch=='a' && ambient>0)
+		ambient -= 5;
+	else if (ch=='A' && ambient<100)
+		ambient += 5;
+	//  Diffuse level
+	else if (ch=='d' && diffuse>0)
+		diffuse -= 5;
+	else if (ch=='D' && diffuse<100)
+		diffuse += 5;
+	//  Specular level
+	else if (ch=='s' && specular>0)
+		specular -= 5;
+	else if (ch=='S' && specular<100)
+		specular += 5;
+	//  Emission level
+	else if (ch=='e' && emission>0)
+		emission -= 5;
+	else if (ch=='E' && emission<100)
+		emission += 5;
+	//  Shininess level
+	else if (ch=='n' && shininess>-1)
+		shininess -= 1;
+	else if (ch=='N' && shininess<7)
+		shininess += 1;
+	else if (ch=='z')
+	{
+		if(show_sheet && show_grid)
+		show_sheet = false;
+		else if(!show_sheet && show_grid)
+		{
+			show_sheet = true;
+			show_grid = false;
+		}
+		else if(show_sheet && !show_grid)
+			show_sheet = false;
+		else
+			show_sheet = show_grid = true;
+	}
 	else if (ch == 'p' || ch == 'P')
 		show_pointer = true;
-      
-   //  Translate shininess power to value (-1 => 0)
-   shinyvec[0] = shininess<0 ? 0 : pow(2.0,shininess);
-   //  Reproject
-   Project(fov,asp,dim);
-   //  Animate if requested
-   //glutIdleFunc(move?idle:NULL);
-   //  Tell GLUT it is necessary to redisplay the scene
-   glutPostRedisplay();
+
+	//  Translate shininess power to value (-1 => 0)
+	shinyvec[0] = shininess<0 ? 0 : pow(2.0,shininess);
+	//  Reproject
+	Project(fov,asp,dim);
+	//  Animate if requested
+	//glutIdleFunc(move?idle:NULL);
+	//  Tell GLUT it is necessary to redisplay the scene
+	glutPostRedisplay();
 }
 
 /*
