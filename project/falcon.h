@@ -17,7 +17,7 @@
 #define CANOPY_FRONT_TEX 5
 #define FORK_TOP_TEX     6
 #define FORK_BOTTOM_TEX  7
-#define BREAKING_ORB_TEX  8
+#define BREAKING_ORB_TEX 8
 
 using namespace kutils;
 

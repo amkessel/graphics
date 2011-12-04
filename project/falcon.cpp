@@ -38,7 +38,7 @@ char *falcon_tex_names[] = { (char*)"./texs/tex_bottom.bmp",
 							 (char*)"./texs/tex_canopy_front.bmp",
 							 (char*)"./texs/tex_fork_top.bmp",
 							 (char*)"./texs/tex_fork_bottom.bmp",
-							 (char*)"./texs/tex_moon.bmp"}; // this tex just looks cool for the orb
+							 (char*)"./texs/tex_orb.bmp"};
 
 /* Takes a model coordinate and transforms it into a texture coordinate.
    Specific to mapping a 2x2 square centered on the origin to a 1x1 texture */

@@ -105,7 +105,6 @@ int fov=35;       //  Field of view (for perspective)
 double asp=1;     //  Aspect ratio
 double dim=2.0;   //  Size of world
 // Light values
-int distance  =   5;  // Light distance
 int inc       =  10;  // Ball increment
 int emission  =   0;  // Emission intensity (%)
 int ambient   =  30;  // Ambient intensity (%)
@@ -114,6 +113,7 @@ int specular  = 100;  // Specular intensity (%)
 int shininess =   6;  // Shininess (power of two)
 float shinyvec[1] = {64};    // Shininess (value)
 unsigned int stars_tex;
+unsigned int cockpit_tex;
 
 // game state
 bool pause_planets = false;
@@ -151,6 +151,7 @@ double Ex, Ey, Ez; // location of the camera
 double Cx, Cy, Cz; // where the camera is looking
 bool show_pointer = false;
 point3 *ref_eye_pos = &falcon_pos;
+bool cockpit_view = false;
 // animation parameters
 bool lock_controls = false;
 anim_type animation = NO_ANIM;
@@ -163,6 +164,7 @@ double falcon_scale_factor = 1; // stretches the falcon during a jump
 double falcon_flip_angle = 0.0;
 double falcon_roll_angle = 0.0;
 double falcon_eye_angle = 0.0;
+bool was_in_cockpit_view = false;
 
 point3 no_translation = {0,0,0};
 point4 no_rotation = {0,0,0,0};
@@ -174,6 +176,72 @@ point3 norms[SHEET_PTS][SHEET_PTS];
 /*********************************
  * DRAWING FUNCTIONS
  *********************************/
+
+/*
+ *  Draw the cockpit as an overlay
+ *  Must be called last
+ */
+void Cockpit()
+{
+	//  Save transform attributes (Matrix Mode and Enabled Modes)
+	glPushAttrib(GL_TRANSFORM_BIT|GL_ENABLE_BIT);
+	//  Save projection matrix and set unit transform
+	glMatrixMode(GL_PROJECTION);
+	glPushMatrix();
+	glLoadIdentity();
+	glOrtho(-asp,+asp,-1,1,-1,1);
+	//  Save model view matrix and set to indentity
+	glMatrixMode(GL_MODELVIEW);
+	glPushMatrix();
+	glLoadIdentity();
+	//  Draw instrument panel with texture
+	glBindTexture(GL_TEXTURE_2D,cockpit_tex);
+	glColor3f(1,1,1);
+	glEnable(GL_TEXTURE_2D);
+//	glBegin(GL_QUADS);
+//	glTexCoord2d(0,0);glVertex2f(-2,-1);
+//	glTexCoord2d(1,0);glVertex2f(+2,-1);
+//	glTexCoord2d(1,1);glVertex2f(+2, 0);
+//	glTexCoord2d(0,1);glVertex2f(-2, 0);
+//	glEnd();
+	glDisable(GL_TEXTURE_2D);
+	//  Draw the inside of the cockpit in grey
+	glColor3f(0.6,0.6,0.6);
+	glBegin(GL_QUADS);
+	//  Port
+	glVertex2f(-2,-1);
+	glVertex2f(-2,+1);
+	glVertex2f(-8,+1);
+	glVertex2f(-8,-1);
+	//  Starboard
+	glVertex2f(+2,-1);
+	glVertex2f(+2,+1);
+	glVertex2f(+8,+1);
+	glVertex2f(+8,-1);
+	//  Port overhead
+	glVertex2f(-2.00,+0.8);
+	glVertex2f(-2.00,+1);
+	glVertex2f(-0.03,+1);
+	glVertex2f(-0.03,+0.9);
+	//  Starboard overhead
+	glVertex2f(+2.00,+0.8);
+	glVertex2f(+2.00,+1);
+	glVertex2f(+0.03,+1);
+	glVertex2f(+0.03,+0.9);
+	//  Windshield divide
+	glVertex2f(-0.03,+1);
+	glVertex2f(+0.03,+1);
+	glVertex2f(+0.03,+0);
+	glVertex2f(-0.03,+0);
+	glEnd();
+	//  Reset model view matrix
+	glPopMatrix();
+	//  Reset projection matrix
+	glMatrixMode(GL_PROJECTION);
+	glPopMatrix();
+	//  Pop transform attributes (Matrix Mode and Enabled Modes)
+	glPopAttrib();
+}
 
 static void Sky(double D, point3 trans)
 {
@@ -254,7 +322,8 @@ void draw_scene()
 	point4 falcon_roll_rot = {1, 0, 0, falcon_roll_angle}; // only roll about the falcon's x-axis
 	point4 falcon_rots[] = {falcon_base_rot, falcon_flip_rot, falcon_roll_rot};
 	point3 falcon_scale = {falcon_scale_factor*FALCON_SCALE, FALCON_SCALE, FALCON_SCALE};
-	Draw_falcon(&falcon_trans, falcon_rots, &falcon_scale, 1,3,1, thrust_on, &tbox);
+	if(!cockpit_view)
+		Draw_falcon(&falcon_trans, falcon_rots, &falcon_scale, 1,3,1, thrust_on, &tbox);
 	// the thrust rectangle is in falcon coordinates, so transform it to world coordinates
 	tbox.ful = ManualTransformAboutY(falcon_trans, falcon_rots[0], falcon_scale, tbox.ful);
 	tbox.fll = ManualTransformAboutY(falcon_trans, falcon_rots[0], falcon_scale, tbox.fll);
@@ -335,14 +404,20 @@ void draw_scene()
 	// draw inertial braking orb
 	if(orb_alpha > 0)
 	{
+		double scale = cockpit_view ? 0.25 : 0.015;
 		point3 orb_trans = falcon_trans;
-		point3 orb_scale = {0.015,0.015,0.015};
+		point3 orb_scale = {scale,scale,scale};
 		//point3 orb_scale = {orb_alpha*ORB_BASE_RAD, orb_alpha*ORB_BASE_RAD, orb_alpha*ORB_BASE_RAD};
 		Draw_Braking_Orb(orb_trans, orb_scale, orb_alpha);
 	}
 	
 	// draw the sun's corona
 	Draw_Corona(sun_trans, sun_rots, sun_scale);
+	
+	if(cockpit_view)
+	{
+		Cockpit();
+	}
 }
 
 void set_lighting()
@@ -525,6 +600,8 @@ void start_anim(anim_type type)
 		jump_eye_pos = falcon_jump_start_pos;
 		ref_eye_pos = &jump_eye_pos;
 	}
+	was_in_cockpit_view = cockpit_view;
+	cockpit_view = false;
 	lock_controls = true;
 	animation = type;
 }
@@ -538,6 +615,7 @@ void end_anim()
 	ref_eye_pos = &falcon_pos;
 	lock_controls = false;
 	pause_planets = false;
+	cockpit_view = was_in_cockpit_view;
 	animation = NO_ANIM;
 }
 
@@ -583,7 +661,14 @@ void animate_flip()
 	// stopping case
 	if (delta_t >= FLIP_DURATION)
 	{
-		start_anim(EYE_ROT);
+		if(was_in_cockpit_view)
+		{
+			end_anim();
+			falcon_dir += 180;
+			falcon_dir = fmod(falcon_dir,360.0);
+		}
+		else
+			start_anim(EYE_ROT);
 	}
 	else
 	{
@@ -644,14 +729,31 @@ void set_eye_position()
 {
 	double dist = -1 * (FOLLOW_DIST+1.5*eye_height);
 
-	Ex = ref_eye_pos->x + dist * KUTILS_COS(falcon_dir);
-	Ez = ref_eye_pos->z - dist * KUTILS_SIN(falcon_dir);
-	Ey = adjust_eye_height(Ex, ref_eye_pos->y + eye_height, Ez);
-	
-	Cx = ref_eye_pos->x + VIEW_DIST_AHEAD * KUTILS_COS(falcon_dir);
-	Cy = ref_eye_pos->y;
-	Cz = ref_eye_pos->z - VIEW_DIST_AHEAD * KUTILS_SIN(falcon_dir);
-	
+	double Ux = 0;
+	double Uy = 1;
+	double Uz = 0;
+
+	if(cockpit_view)
+	{
+		Ex = falcon_pos.x;
+		Ey = falcon_pos.y;
+		Ez = falcon_pos.z;
+
+		Cx = falcon_pos.x + VIEW_DIST_AHEAD * KUTILS_COS(falcon_dir);
+		Cy = falcon_pos.y;
+		Cz = falcon_pos.z - VIEW_DIST_AHEAD * KUTILS_SIN(falcon_dir);
+	}
+	else
+	{
+		Ex = ref_eye_pos->x + dist * KUTILS_COS(falcon_dir);
+		Ez = ref_eye_pos->z - dist * KUTILS_SIN(falcon_dir);
+		Ey = adjust_eye_height(Ex, ref_eye_pos->y + eye_height, Ez);
+
+		Cx = ref_eye_pos->x + VIEW_DIST_AHEAD * KUTILS_COS(falcon_dir);
+		Cy = ref_eye_pos->y;
+		Cz = ref_eye_pos->z - VIEW_DIST_AHEAD * KUTILS_SIN(falcon_dir);
+	}
+
 	if(falcon_eye_angle != 0)
 	{
 		point2 target = {Ex, Ez};
@@ -660,7 +762,7 @@ void set_eye_position()
 		rotate_about_point(target, reference, falcon_eye_angle, &result);
 		Ex = result.x;
 		Ez = result.y;
-		
+
 		target.x = Cx;
 		target.y = Cz;
 		rotate_about_point(target, reference, falcon_eye_angle, &result);
@@ -681,7 +783,7 @@ void set_eye_position()
 	double Cy = falcon_pos.y;
 	double Cz = falcon_pos.z;
 */
-	gluLookAt(Ex,Ey,Ez , Cx,Cy,Cz, 0,1,0);	
+	gluLookAt(Ex,Ey,Ez , Cx,Cy,Cz, Ux,Uy,Uz);	
 }
 
 /******************************
@@ -830,13 +932,11 @@ void special(int key,int x,int y)
 		start_anim(FLIP);
 	}
 	//  PageUp key - increase view elevation
-	else if (key == GLUT_KEY_PAGE_DOWN)
+	else if (key == GLUT_KEY_PAGE_DOWN && !cockpit_view)
 		eye_height += EYE_HEIGHT_INC;
 	//  PageDown key - decrease view elevation
-	else if (key == GLUT_KEY_PAGE_UP)
+	else if (key == GLUT_KEY_PAGE_UP && !cockpit_view)
 		eye_height -= EYE_HEIGHT_INC;
-	else if (key == GLUT_KEY_F1)
-		distance = (distance==1) ? 5 : 1;
 
 	//  Update projection
 	Project(fov,asp,dim);
@@ -911,6 +1011,8 @@ void key(unsigned char ch,int x,int y)
 		shininess -= 1;
 	else if (ch=='N' && shininess<7)
 		shininess += 1;
+	else if (ch=='c' || ch =='C')
+		cockpit_view = !cockpit_view;
 	else if (ch=='z')
 	{
 		if(show_sheet && show_grid)
@@ -980,6 +1082,7 @@ int main(int argc,char* argv[])
 		planet_tex[i] = LoadTexBMP(planet_tex_names[i]);
 	}
 	stars_tex = LoadTexBMP((char*)"./texs/tex_stars.bmp");
+	cockpit_tex = LoadTexBMP((char*)"./texs/tex_cockpit.bmp");
 	// perform some initializations
 	Initialize_Thrust();
 	last_time = glutGet(GLUT_ELAPSED_TIME)/1000.0;
