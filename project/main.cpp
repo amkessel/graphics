@@ -102,7 +102,6 @@ enum anim_type
 };
 
 int fov=35;       //  Field of view (for perspective)
-int light=1;      //  Lighting
 double asp=1;     //  Aspect ratio
 double dim=2.0;   //  Size of world
 // Light values
@@ -114,12 +113,10 @@ int diffuse   = 50;  // Diffuse intensity (%)
 int specular  = 100;  // Specular intensity (%)
 int shininess =   6;  // Shininess (power of two)
 float shinyvec[1] = {64};    // Shininess (value)
-float ylight  =   2;  // Elevation of light
 unsigned int stars_tex;
 
 // game state
 bool pause_planets = false;
-bool pause_falcon = false;
 // falcon state
 //point3 falcon_pos = {-2,FALCON_HEIGHT,-2};
 point3 falcon_pos = {-10,FALCON_HEIGHT,-10};
@@ -355,7 +352,6 @@ void set_lighting()
 	float Diffuse[]   = {0.01*diffuse ,0.01*diffuse ,0.01*diffuse ,1.0};
 	float Specular[]  = {0.01*specular,0.01*specular,0.01*specular,1.0};
 	//  Light position
-	//float Position[]  = {distance*KUTILS_COS(zh),ylight,distance*KUTILS_SIN(zh),1.0};
 	float Position[] = {0,0,0};
 	//  Draw light position as ball (still no lighting here)
 	glColor3f(1,1,1);
@@ -569,10 +565,11 @@ void animate_jump()
 							? (dist / FALCON_SCALE)
 							: ((JUMP_DIST - dist) / FALCON_SCALE);
 							
-		if(delta_t >= JUMP_DURATION/2.0)
+		double jump_fraction = 0.8;
+		if(delta_t >= JUMP_DURATION * jump_fraction)
 		{
-			double delta_t_eye = delta_t - JUMP_DURATION / 2.0;
-			double eye_dist = JUMP_DIST * delta_t_eye / (JUMP_DURATION/2.0);
+			double delta_t_eye = delta_t - JUMP_DURATION * jump_fraction;
+			double eye_dist = 4*JUMP_DIST * delta_t_eye / (JUMP_DURATION * jump_fraction);
 			jump_eye_pos.x = falcon_jump_start_pos.x + eye_dist * KUTILS_COS(falcon_dir);
 			jump_eye_pos.z = falcon_jump_start_pos.z - eye_dist * KUTILS_SIN(falcon_dir);
 		}
@@ -761,29 +758,26 @@ void idle()
 		orbit_angle_comet = fmod(orbit_angle_comet,360.0);
 	}
 	
-	if(!pause_falcon)
-	{	
-		// update falcon's velocity
-		update_velocity();
-		
-		// move the falcon
-		move_falcon(time);
-		
-		// turn the falcon
-		turn_falcon(time);
+	// update falcon's velocity
+	update_velocity();
+	
+	// move the falcon
+	move_falcon(time);
+	
+	// turn the falcon
+	turn_falcon(time);
 
-		// set whether we need to increase or decrease the orb alpha
-		if(increase_orb_alpha)
-		{
-			orb_alpha += ORB_ALPHA_INC;
-			if(orb_alpha > ORB_ALPHA_MAX) orb_alpha = ORB_ALPHA_MAX;
-		}
-		else
-		{
-			orb_alpha -= ORB_ALPHA_INC;
-			if(orb_alpha < 0) orb_alpha = 0;
-		} 
+	// set whether we need to increase or decrease the orb alpha
+	if(increase_orb_alpha)
+	{
+		orb_alpha += ORB_ALPHA_INC;
+		if(orb_alpha > ORB_ALPHA_MAX) orb_alpha = ORB_ALPHA_MAX;
 	}
+	else
+	{
+		orb_alpha -= ORB_ALPHA_INC;
+		if(orb_alpha < 0) orb_alpha = 0;
+	} 
 
 	if(animation == JUMP)
 		animate_jump();
@@ -884,9 +878,6 @@ void key(unsigned char ch,int x,int y)
 		pause_planets = true;
 		start_anim(JUMP);
 	}
-	//  Toggle lighting
-	else if (ch == 'l' || ch == 'L')
-		light = 1-light;
 	//  Toggle orbiting planets
 	else if (ch == 'm' || ch == 'M')
 		pause_planets = !pause_planets;
@@ -895,11 +886,6 @@ void key(unsigned char ch,int x,int y)
 		fov--;
 	else if (ch == '+' && ch<179)
 		fov++;
-	//  Light elevation
-	else if (ch=='[')
-		ylight -= 0.1;
-	else if (ch==']')
-		ylight += 0.1;
 	//  Ambient level
 	else if (ch=='a' && ambient>0)
 		ambient -= 5;
