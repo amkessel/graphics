@@ -110,7 +110,7 @@ double dim=2.0;   //  Size of world
 // Light values
 int inc       =  10;  // Ball increment
 int emission  =   0;  // Emission intensity (%)
-int ambient   =  30;  // Ambient intensity (%)
+int ambient   =  0;  // Ambient intensity (%)
 int diffuse   = 50;  // Diffuse intensity (%)
 int specular  = 100;  // Specular intensity (%)
 int shininess =   6;  // Shininess (power of two)
@@ -548,10 +548,10 @@ void set_lighting()
 	//  Light position
 	float Position[] = {0,0,0};
 	//  Draw light position as ball (still no lighting here)
-	glColor3f(1,1,1);
-	point3 sphere_trans = {Position[0],Position[1],Position[2]};
-	point3 sphere_scale = {0.1, 0.1, 0.1};
-	Sphere(20, sphere_trans, sphere_scale);
+	//glColor3f(1,1,1);
+	//point3 sphere_trans = {Position[0],Position[1],Position[2]};
+	//point3 sphere_scale = {0.001, 0.001, 0.001};
+	//Sphere(20, sphere_trans, sphere_scale);
 	//  OpenGL should normalize normal vectors
 	glEnable(GL_NORMALIZE);
 	//  Enable lighting

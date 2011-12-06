@@ -9,6 +9,9 @@ using namespace kdraw;
 point3 no_translation = {0,0,0};
 point4 no_rotation = {0,0,0,0};
 point3 no_scale = {1,1,1};
+	
+GLfloat sunEmissiveMaterial[] = {1, 1, 0.5};
+GLfloat blckEmissiveMaterial[] = {0.0, 0.0, 0.0};
 
 unsigned int planet_tex[NUM_PLANET_TEXS];
 char *planet_tex_names[] = { (char*)"./texs/tex_sun.bmp",
@@ -40,11 +43,6 @@ static void Vertex(int th,int ph, bool reverse_normal, bool tex)
 		glTexCoord2d(th/360.0,ph/180.0+0.5);
 	glVertex3d(p.x,p.y,p.z);
 }
-
-//static void Vertex(int th, int ph, bool reverse_normal)
-//{
-//	Vertex(th,ph,reverse_normal,true);
-//}
 
 /* Draw planet (modified from example 17) */
 void draw_planet(int tex, bool reverse_normal, float thmin, float thmax, float r, float g, float b, float a)
@@ -95,7 +93,9 @@ void Draw_Sun(point3 translation, point4 rotation, point3 scale)
 	// perform our own transformation
 	Transform(translation, rotation, scale);
 	
+	glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, sunEmissiveMaterial);
 	draw_planet(SUN_TEX, true);
+	glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, blckEmissiveMaterial);
 	
 	// reset the old transformation
 	glPopMatrix();
@@ -246,6 +246,7 @@ void Draw_Corona(point3 translation, point4 rotation, point3 scale)
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA,GL_ONE);
 	glDepthMask(0);
+	glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, sunEmissiveMaterial);
 
 	//  Latitude bands
 	for (ph=-90;ph<90;ph+=5)
@@ -280,7 +281,7 @@ void Draw_Corona(point3 translation, point4 rotation, point3 scale)
 	
 	glDepthMask(1);
 	glDisable(GL_BLEND);
-	glEnable(GL_LIGHTING);
+	glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, blckEmissiveMaterial);
 
 	// reset the old transformation
 	glPopMatrix();
