@@ -156,7 +156,7 @@ double Ex, Ey, Ez; // location of the camera
 double Cx, Cy, Cz; // where the camera is looking
 bool show_pointer = false;
 point3 *ref_eye_pos = &falcon_pos;
-bool cockpit_view = true;
+bool cockpit_view = false;
 bool top_down_view = false;
 // animation parameters
 bool lock_controls = false;
@@ -270,8 +270,6 @@ void Cockpit()
 	rotate_about_point(base_rght, ref, rotate, &new_base_rght);
 	rotate_about_point(base_left, ref, rotate, &new_base_left);
 	rotate_about_point(tip, ref, rotate, &new_tip);
-	
-//	printf("{%g,%g},{%g,%g},{%g,%g}\n",new_base_rght.x,new_base_rght.y,new_base_left.x,new_base_left.y,new_tip.x,new_tip.y);
 	
 	glColor3f(1,0,0);
 	glBegin(GL_POLYGON);
@@ -786,7 +784,7 @@ double calc_adjustment_height(point3 pos, point3 body_pos, double body_rad, doub
 double adjust_eye_height(double x, double y, double z)
 {
 	point3 pos = {x, y, z};
-	double buffer = 1;
+	double buffer = 0.2;
 	
 	double adjust = calc_adjustment_height(pos, sun_pos, SUN_RAD, buffer);	
 	if(adjust > 0)
@@ -797,6 +795,10 @@ double adjust_eye_height(double x, double y, double z)
 		return adjust + y;
 		
 	adjust = calc_adjustment_height(pos, moon_pos, MOON_RAD, buffer);
+	if(adjust > 0)
+		return adjust + y;
+		
+	adjust = calc_adjustment_height(pos, jupiter_pos, JUPITER_RAD, buffer);
 	if(adjust > 0)
 		return adjust + y;
 		
@@ -836,7 +838,7 @@ void set_eye_position()
 		Ex = ref_eye_pos->x + dist * KUTILS_COS(falcon_dir);
 		Ez = ref_eye_pos->z - dist * KUTILS_SIN(falcon_dir);
 		Ey = adjust_eye_height(Ex, ref_eye_pos->y + eye_height, Ez);
-
+		
 		Cx = ref_eye_pos->x + VIEW_DIST_AHEAD * KUTILS_COS(falcon_dir);
 		Cy = ref_eye_pos->y;
 		Cz = ref_eye_pos->z - VIEW_DIST_AHEAD * KUTILS_SIN(falcon_dir);
@@ -1027,7 +1029,8 @@ void special(int key,int x,int y)
 		eye_height += EYE_HEIGHT_INC;
 	//  PageDown key - decrease view elevation
 	else if (key == GLUT_KEY_PAGE_UP && !cockpit_view)
-		eye_height -= EYE_HEIGHT_INC;
+		if(eye_height > 0)
+			eye_height -= EYE_HEIGHT_INC;
 
 	//  Update projection
 	Project(fov,asp,dim);
