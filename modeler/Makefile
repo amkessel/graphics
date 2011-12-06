@@ -6,7 +6,8 @@ all:
 	g++ -Wall -O3 -g -lglut -lGLU -c -o kdraw.o kdraw.cpp
 	g++ -Wall -O3 -g -lglut -lGLU -c -o kdraw2d.o kdraw2d.cpp
 	g++ -Wall -O3 -g -lglut -lGLU -c -o kdraw3d.o kdraw3d.cpp
-	g++ -Wall -O3 -g -lglut -lGLU errcheck.o fatal.o loadtexbmp.o kutils.o kdraw.o kdraw2d.o kdraw3d.o -o modeler main.cpp
+	g++ -Wall -O3 -g -lglut -lGLU -c -o planets.o planets.cpp
+	g++ -Wall -O3 -g -lglut -lGLU planets.o errcheck.o fatal.o loadtexbmp.o kutils.o kdraw.o kdraw2d.o kdraw3d.o -o modeler main.cpp
 	
 clean:
 	rm *.o

@@ -49,12 +49,15 @@ using namespace kutils;
 #define ORBIT_RAD_EARTH   3
 #define ORBIT_RAD_MOON    0.75
 #define ORBIT_RAD_JUPITER 6
-#define ORBIT_RAD_COMET   5
+#define ORBIT_RAD_COMET   7
+
+#define ORBIT_OFFSET_COMET 5
+#define ORBIT_SQUISH_COMET 0.5 // factor by which the comet's orbit will be squished in the z direction
 
 #define ORBIT_SPEED_EARTH   10  // degrees/second
 #define ORBIT_SPEED_MOON    20   // degrees/second
 #define ORBIT_SPEED_JUPITER 5 // degrees/second
-#define ORBIT_SPEED_COMET   1  // degrees/second
+#define ORBIT_SPEED_COMET   5  // degrees/second
 
 #define ROTATE_SPEED_EARTH   70    // degrees/second
 #define ROTATE_SPEED_JUPITER 20 // degrees/second
@@ -117,6 +120,7 @@ unsigned int cockpit_tex;
 
 // game state
 bool pause_planets = false;
+bool gravity_on = true;
 // falcon state
 //point3 falcon_pos = {-2,FALCON_HEIGHT,-2};
 point3 falcon_pos = {-10,FALCON_HEIGHT,-10};
@@ -131,7 +135,7 @@ double orbit_angle_moon = 0.0;
 double rotate_angle_moon = 0.0;
 double orbit_angle_jupiter = 0.0;
 double rotate_angle_jupiter = 0.0;
-double orbit_angle_comet = 0.0;
+double orbit_angle_comet = 270.0;
 point3 sun_pos = {0,0,0};
 point3 earth_pos = {0,0,0};
 point3 moon_pos = {0,0,0};
@@ -152,6 +156,7 @@ double Cx, Cy, Cz; // where the camera is looking
 bool show_pointer = false;
 point3 *ref_eye_pos = &falcon_pos;
 bool cockpit_view = false;
+bool top_down_view = false;
 // animation parameters
 bool lock_controls = false;
 anim_type animation = NO_ANIM;
@@ -165,13 +170,14 @@ double falcon_flip_angle = 0.0;
 double falcon_roll_angle = 0.0;
 double falcon_eye_angle = 0.0;
 bool was_in_cockpit_view = false;
-
-point3 no_translation = {0,0,0};
-point4 no_rotation = {0,0,0,0};
-point3 no_scale = {1,1,1};
+bool was_paused = false;
 
 point3 pts[SHEET_PTS][SHEET_PTS];
 point3 norms[SHEET_PTS][SHEET_PTS];
+
+extern point3 no_translation;
+extern point4 no_rotation;
+extern point3 no_scale;
 
 /*********************************
  * DRAWING FUNCTIONS
@@ -375,15 +381,6 @@ void draw_scene()
 	point4 jupiter_rots = {0,1,0,rotate_angle_jupiter};
 	point3 jupiter_scale = {JUPITER_RAD,JUPITER_RAD,JUPITER_RAD};
 	Draw_Jupiter(jupiter_trans, jupiter_rots, jupiter_scale);
-
-	// draw the comet
-	comet_pos.x = -ORBIT_RAD_COMET*KUTILS_COS(orbit_angle_comet);
-	comet_pos.y = COMET_HEIGHT;
-	comet_pos.z = ORBIT_RAD_COMET*KUTILS_SIN(orbit_angle_comet);
-	point3 comet_trans = comet_pos;
-	point4 comet_rots = no_rotation;
-	point3 comet_scale = {COMET_RAD,COMET_RAD,COMET_RAD};
-	Draw_Comet(comet_trans, comet_rots, comet_scale);
 	
 	// draw the sheet
 	Calculate_sheet_points(pts, falcon_pos);
@@ -392,6 +389,17 @@ void draw_scene()
 	Draw_sheet(pts, norms, show_sheet, show_grid);
 	
 	// TRANSPARENT OBJECTS AFTER THIS
+
+	// draw the comet
+	double coma_alpha, tail_len, rot_angle;
+	comet_pos.x = -ORBIT_RAD_COMET*KUTILS_COS(orbit_angle_comet) + ORBIT_OFFSET_COMET;
+	comet_pos.y = COMET_HEIGHT;
+	comet_pos.z = ORBIT_SQUISH_COMET*ORBIT_RAD_COMET*KUTILS_SIN(orbit_angle_comet);
+	Calculate_Comet_Params(comet_pos.x, comet_pos.z, ORBIT_RAD_COMET, &coma_alpha, &tail_len, &rot_angle);
+	point3 comet_trans = comet_pos;
+	point4 comet_rots = {0,1,0, rot_angle};
+	point3 comet_scale = {COMET_RAD,COMET_RAD,COMET_RAD};
+	Draw_Comet(comet_trans, comet_rots, comet_scale, tail_len, coma_alpha);
 	
 	// draw the thrust
 	Draw_Thrust(time);
@@ -546,10 +554,13 @@ point3 find_weighted_norm()
 
 void update_velocity()
 {
-	point3 weighted_norm = find_weighted_norm();
+	if(gravity_on)
+	{
+		point3 weighted_norm = find_weighted_norm();
 	
-	falcon_vel.x += GRAV_STRENGTH*weighted_norm.x;
-	falcon_vel.z += GRAV_STRENGTH*weighted_norm.z;
+		falcon_vel.x += GRAV_STRENGTH*weighted_norm.x;
+		falcon_vel.z += GRAV_STRENGTH*weighted_norm.z;
+	}
 }
 
 void move_falcon(double time) // time is in sec
@@ -558,6 +569,8 @@ void move_falcon(double time) // time is in sec
 
 	falcon_pos.x += delta_t * falcon_vel.x;
 	falcon_pos.z += delta_t * falcon_vel.z;
+	
+	falcon_pos = comet_pos;
 }
 
 void turn_falcon(double time)
@@ -601,6 +614,7 @@ void start_anim(anim_type type)
 		ref_eye_pos = &jump_eye_pos;
 	}
 	was_in_cockpit_view = cockpit_view;
+	was_paused = pause_planets;
 	cockpit_view = false;
 	lock_controls = true;
 	animation = type;
@@ -616,6 +630,7 @@ void end_anim()
 	lock_controls = false;
 	pause_planets = false;
 	cockpit_view = was_in_cockpit_view;
+	pause_planets = was_paused;
 	animation = NO_ANIM;
 }
 
@@ -743,6 +758,16 @@ void set_eye_position()
 		Cy = falcon_pos.y;
 		Cz = falcon_pos.z - VIEW_DIST_AHEAD * KUTILS_SIN(falcon_dir);
 	}
+	else if(top_down_view)
+	{
+		Ex = falcon_pos.x;
+		Ey = falcon_pos.y + 7*eye_height;
+		Ez = falcon_pos.z;
+	
+		Cx = falcon_pos.x - 0.01;
+		Cy = falcon_pos.y;
+		Cz = falcon_pos.z;
+	}
 	else
 	{
 		Ex = ref_eye_pos->x + dist * KUTILS_COS(falcon_dir);
@@ -769,20 +794,7 @@ void set_eye_position()
 		Cx = result.x;
 		Cz = result.y;
 	}
-/*
-	// TOP DOWN VIEW FOR DEBUGGING
-	double Ex = falcon_pos.x;
-	anim_start_time = GetTime();
-	falcon_jump_start_pos = falcon_pos;
-	lock_controls = true;
-	animation = JUMP;
-	double Ey = falcon_pos.y + 7*eye_height;
-	double Ez = falcon_pos.z;
-	
-	double Cx = falcon_pos.x - 0.01;
-	double Cy = falcon_pos.y;
-	double Cz = falcon_pos.z;
-*/
+
 	gluLookAt(Ex,Ey,Ez , Cx,Cy,Cz, Ux,Uy,Uz);	
 }
 
@@ -1013,6 +1025,10 @@ void key(unsigned char ch,int x,int y)
 		shininess += 1;
 	else if (ch=='c' || ch =='C')
 		cockpit_view = !cockpit_view;
+	else if (ch=='t' || ch=='T')
+		top_down_view = !top_down_view;
+	else if (ch=='g' || ch=='G')
+		gravity_on = !gravity_on;
 	else if (ch=='z')
 	{
 		if(show_sheet && show_grid)

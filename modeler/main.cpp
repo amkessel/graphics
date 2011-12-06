@@ -23,6 +23,7 @@
 //#include "enterprise.h"
 #include "falcon.h"
 #include "CSCIx229.h"
+#include "planets.h"
 
 using namespace kdraw;
 using namespace kutils;
@@ -51,9 +52,19 @@ point3 no_translation = {0,0,0};
 point4 no_rotation = {0,0,0,0};
 point3 no_scale = {1,1,1};
 
+void draw_comet()
+{
+	Draw_Comet(no_translation, no_rotation, no_scale, 5, 0.5);
+}
+
 void draw_model()
 {
-	Draw_falcon();
+	Vector3 x(1,0,0);
+	Vector3 m(-1,1,0);
+	printf("%g\n",m.Angle(&x,true,false));
+
+	//draw_comet();
+//	Draw_falcon();
 //	Draw_enterprise();
 //	draw_spaceship3ds();
 //	Draw_shuttle();
