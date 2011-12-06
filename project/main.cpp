@@ -43,7 +43,7 @@ using namespace kutils;
 #define EARTH_HEIGHT   0.1
 #define MOON_HEIGHT    0.02
 #define JUPITER_HEIGHT 0.12
-#define COMET_HEIGHT   0.02
+#define COMET_HEIGHT   0.1
 #define FALCON_HEIGHT  0.1
 
 #define ORBIT_RAD_EARTH   3
@@ -117,6 +117,7 @@ int shininess =   6;  // Shininess (power of two)
 float shinyvec[1] = {64};    // Shininess (value)
 unsigned int stars_tex;
 unsigned int cockpit_tex;
+unsigned int instr_tex;
 
 // game state
 bool pause_planets = false;
@@ -155,7 +156,7 @@ double Ex, Ey, Ez; // location of the camera
 double Cx, Cy, Cz; // where the camera is looking
 bool show_pointer = false;
 point3 *ref_eye_pos = &falcon_pos;
-bool cockpit_view = false;
+bool cockpit_view = true;
 bool top_down_view = false;
 // animation parameters
 bool lock_controls = false;
@@ -179,6 +180,56 @@ extern point3 no_translation;
 extern point4 no_rotation;
 extern point3 no_scale;
 
+/******************************
+ * HELPER FUNCTIONS
+ ******************************/
+ 
+void rotate_about_point(point2 target, point2 reference, double angle, point2 *result)
+{
+	// first translate the point so that it's rotating about the origin
+	target.x -= reference.x;
+	target.y -= reference.y;
+	
+	// perform the math to rotate the point
+	double new_x = target.x * KUTILS_COS(angle) - target.y * KUTILS_SIN(angle);
+	double new_y = target.x * KUTILS_SIN(angle) + target.y * KUTILS_COS(angle);
+	
+	// translate it back to the reference point
+	result->x = new_x + reference.x;
+	result->y = new_y + reference.y;
+}
+
+long double GetTime()
+{
+	//  Elapsed time in seconds
+	return glutGet(GLUT_ELAPSED_TIME)/1000.0;
+}
+
+double angle_from_horiz(double x, double y, double z)
+{
+	double len = sqrt(x*x + y*y + z*z);
+	double angle = KUTILS_ASIN(y/len);
+	return angle;
+}
+
+point3 find_weighted_norm()
+{
+	// The falcon is always between points SHEET_PTS/2-1 and SHEET_PTS/2 in the x and z direction
+	point3 n1 = norms[SHEET_PTS/2-1][SHEET_PTS/2-1];
+	point3 n2 = norms[SHEET_PTS/2  ][SHEET_PTS/2-1];
+	point3 n3 = norms[SHEET_PTS/2  ][SHEET_PTS/2  ];
+	point3 n4 = norms[SHEET_PTS/2-1][SHEET_PTS/2  ];
+
+	point3 pf = falcon_pos;
+	
+	// just find the average for now
+	point3 result = { (n1.x+n2.x+n3.x+n4.x)/4,
+					  0,						// we don't need the y component
+					  (n1.z+n2.z+n3.z+n4.z)/4 };
+
+	return result;
+}
+
 /*********************************
  * DRAWING FUNCTIONS
  *********************************/
@@ -200,46 +251,108 @@ void Cockpit()
 	glMatrixMode(GL_MODELVIEW);
 	glPushMatrix();
 	glLoadIdentity();
-	//  Draw instrument panel with texture
-	glBindTexture(GL_TEXTURE_2D,cockpit_tex);
+		
+	glDisable(GL_LIGHTING);
+	
+	// draw speedometer
+	point2 base_rght = { 0.00573576,-0.581808};
+	point2 base_left = {-0.00573576,-0.598192};
+	point2 tip = {-0.122873,-0.676036};
+	point2 ref = {0,-0.59};
+	point2 new_base_rght;
+	point2 new_base_left;
+	point2 new_tip;
+	
+	double max_angle = -250;
+	double vel = sqrt(falcon_vel.x*falcon_vel.x + falcon_vel.z*falcon_vel.z);
+	double rotate = max_angle * vel / SPEED_LIMIT;
+
+	rotate_about_point(base_rght, ref, rotate, &new_base_rght);
+	rotate_about_point(base_left, ref, rotate, &new_base_left);
+	rotate_about_point(tip, ref, rotate, &new_tip);
+	
+//	printf("{%g,%g},{%g,%g},{%g,%g}\n",new_base_rght.x,new_base_rght.y,new_base_left.x,new_base_left.y,new_tip.x,new_tip.y);
+	
+	glColor3f(1,0,0);
+	glBegin(GL_POLYGON);
+	glVertex2f(new_base_rght.x, new_base_rght.y);
+	glVertex2f(new_base_left.x, new_base_left.y);
+	glVertex2f(new_tip.x,       new_tip.y);
+	glEnd();
+	
 	glColor3f(1,1,1);
 	glEnable(GL_TEXTURE_2D);
-//	glBegin(GL_QUADS);
-//	glTexCoord2d(0,0);glVertex2f(-2,-1);
-//	glTexCoord2d(1,0);glVertex2f(+2,-1);
-//	glTexCoord2d(1,1);glVertex2f(+2, 0);
-//	glTexCoord2d(0,1);glVertex2f(-2, 0);
-//	glEnd();
-	glDisable(GL_TEXTURE_2D);
-	//  Draw the inside of the cockpit in grey
-	glColor3f(0.6,0.6,0.6);
-	glBegin(GL_QUADS);
-	//  Port
-	glVertex2f(-2,-1);
-	glVertex2f(-2,+1);
-	glVertex2f(-8,+1);
-	glVertex2f(-8,-1);
-	//  Starboard
-	glVertex2f(+2,-1);
-	glVertex2f(+2,+1);
-	glVertex2f(+8,+1);
-	glVertex2f(+8,-1);
-	//  Port overhead
-	glVertex2f(-2.00,+0.8);
-	glVertex2f(-2.00,+1);
-	glVertex2f(-0.03,+1);
-	glVertex2f(-0.03,+0.9);
-	//  Starboard overhead
-	glVertex2f(+2.00,+0.8);
-	glVertex2f(+2.00,+1);
-	glVertex2f(+0.03,+1);
-	glVertex2f(+0.03,+0.9);
-	//  Windshield divide
-	glVertex2f(-0.03,+1);
-	glVertex2f(+0.03,+1);
-	glVertex2f(+0.03,+0);
-	glVertex2f(-0.03,+0);
+	
+	glBindTexture(GL_TEXTURE_2D, instr_tex);	
+	glBegin(GL_POLYGON);
+	glTexCoord2d(0,     0);    glVertex2f(-0.5,   -1.1);
+	glTexCoord2d(0,     0.5);  glVertex2f(-0.5,   -0.6);
+	glTexCoord2d(0.3125,0.75); glVertex2f(-0.1875,-0.35);
+	glTexCoord2d(0.6875,0.75); glVertex2f( 0.1875,-0.35);
+	glTexCoord2d(1,     0.5);  glVertex2f( 0.5,   -0.6);
+	glTexCoord2d(1,     0);    glVertex2f( 0.5,   -1.1);
 	glEnd();
+	
+	glBindTexture(GL_TEXTURE_2D, cockpit_tex);	
+	glBegin(GL_POLYGON);
+	glTexCoord2d(0,     0);    glVertex2f(-0.55,   -1);
+	glTexCoord2d(0,     0.5);  glVertex2f(-0.55,   -0.58);
+	glTexCoord2d(0.3125,0.75); glVertex2f(-0.1875,-0.3);
+	glTexCoord2d(0.6875,0.75); glVertex2f( 0.1875,-0.3);
+	glTexCoord2d(1,     0.5);  glVertex2f( 0.55,   -0.58);
+	glTexCoord2d(1,     0);    glVertex2f( 0.55,   -1);
+	glEnd();
+	
+	glBegin(GL_QUADS);
+	// center bar
+	glTexCoord2d(0,0); glVertex2f( 0.5,-0.1);
+	glTexCoord2d(1,0); glVertex2f( 0.5,-0.16);
+	glTexCoord2d(1,5); glVertex2f(-0.5,-0.16);
+	glTexCoord2d(0,5); glVertex2f(-0.5,-0.1);
+	// right vertical bar
+	glTexCoord2d(0,0); glVertex2f(0.94,-0.58);
+	glTexCoord2d(1,0); glVertex2f(1,   -0.58);
+	glTexCoord2d(1,5); glVertex2f(1,   -1);
+	glTexCoord2d(0,5); glVertex2f(0.94,-1);
+	// right diagonal bar
+	glTexCoord2d(0,0); glVertex2f(0.5, -0.1);
+	glTexCoord2d(1,0); glVertex2f(1,   -0.58);
+	glTexCoord2d(1,5); glVertex2f(0.94,-0.58);
+	glTexCoord2d(0,5); glVertex2f(0.5, -0.16);
+	// right inner upward diagonal bar
+	glTexCoord2d(0,0); glVertex2f(0.43,-0.1);
+	glTexCoord2d(1,0); glVertex2f(1.3,1);
+	glTexCoord2d(1,15); glVertex2f(1.37,1);
+	glTexCoord2d(0,15); glVertex2f(0.5,-0.1);
+	// right outer upward diagonal bar
+	glTexCoord2d(0,0); glVertex2f(1,-0.58);
+	glTexCoord2d(1,0); glVertex2f(5,1);
+	glTexCoord2d(1,35); glVertex2f(5.1, 1);
+	glTexCoord2d(0,35); glVertex2f(1,-0.63);
+	// left vertical bar
+	glTexCoord2d(0,0); glVertex2f(-0.94,-0.58);
+	glTexCoord2d(1,0); glVertex2f(-1,   -0.58);
+	glTexCoord2d(1,5); glVertex2f(-1,   -1);
+	glTexCoord2d(0,5); glVertex2f(-0.94,-1);
+	// left diagonal bar
+	glTexCoord2d(0,0); glVertex2f(-0.5, -0.1);
+	glTexCoord2d(1,0); glVertex2f(-1,   -0.58);
+	glTexCoord2d(1,5); glVertex2f(-0.94,-0.58);
+	glTexCoord2d(0,5); glVertex2f(-0.5, -0.16);
+	// left inner upward diagonal bar
+	glTexCoord2d(0,0);  glVertex2f(-0.43,-0.1);
+	glTexCoord2d(1,0);  glVertex2f(-1.3,1);
+	glTexCoord2d(1,15); glVertex2f(-1.37,1);
+	glTexCoord2d(0,15); glVertex2f(-0.5,-0.1);
+	// left outer upward diagonal bar
+	glTexCoord2d(0,0);  glVertex2f(-1,-0.58);
+	glTexCoord2d(1,0);  glVertex2f(-5,1);
+	glTexCoord2d(1,35); glVertex2f(-5.1, 1);
+	glTexCoord2d(0,35); glVertex2f(-1,-0.63);
+	glEnd();
+	
+	glEnable(GL_LIGHTING);
+	
 	//  Reset model view matrix
 	glPopMatrix();
 	//  Reset projection matrix
@@ -484,74 +597,10 @@ void collision_detect(point3 pos, point3 body_pos, double body_rad, bool buffer,
 	}
 }
 
-// function for collision detection, but not working or used right now
-double adjustment_height(point3 pos, point3 body_pos, double body_rad, double buffer)
-{
-	double adjust = 0;
-	
-	double sqrt2 = 1.414;
-	double delta_x = body_pos.x - pos.x;
-	double delta_z = body_pos.z - pos.z;
-	double xz_dist = sqrt(delta_x*delta_x + delta_z*delta_z);
-	
-	if(xz_dist < sqrt2 * body_rad)
-	{
-		adjust = (sqrt2 * body_rad) - xz_dist + buffer;
-	}
-	
-	return adjust;
-}
-
-/******************************
- * HELPER FUNCTIONS
- ******************************/
+/**************************
+ * GAME FUNCTIONALITY
+ **************************/
  
-void rotate_about_point(point2 target, point2 reference, double angle, point2 *result)
-{
-	// first translate the point so that it's rotating about the origin
-	target.x -= reference.x;
-	target.y -= reference.y;
-	
-	// perform the math to rotate the point
-	double new_x = target.x * KUTILS_COS(angle) - target.y * KUTILS_SIN(angle);
-	double new_y = target.x * KUTILS_SIN(angle) + target.y * KUTILS_COS(angle);
-	
-	// translate it back to the reference point
-	result->x = new_x + reference.x;
-	result->y = new_y + reference.y;
-}
-
-long double GetTime()
-{
-	//  Elapsed time in seconds
-	return glutGet(GLUT_ELAPSED_TIME)/1000.0;
-}
-
-double angle_from_horiz(double x, double y, double z)
-{
-	double len = sqrt(x*x + y*y + z*z);
-	double angle = KUTILS_ASIN(y/len);
-	return angle;
-}
-
-point3 find_weighted_norm()
-{
-	// The falcon is always between points SHEET_PTS/2-1 and SHEET_PTS/2 in the x and z direction
-	point3 n1 = norms[SHEET_PTS/2-1][SHEET_PTS/2-1];
-	point3 n2 = norms[SHEET_PTS/2  ][SHEET_PTS/2-1];
-	point3 n3 = norms[SHEET_PTS/2  ][SHEET_PTS/2  ];
-	point3 n4 = norms[SHEET_PTS/2-1][SHEET_PTS/2  ];
-
-	point3 pf = falcon_pos;
-	
-	// just find the average for now
-	point3 result = { (n1.x+n2.x+n3.x+n4.x)/4,
-					  0,						// we don't need the y component
-					  (n1.z+n2.z+n3.z+n4.z)/4 };
-
-	return result;
-}
-
 void update_velocity()
 {
 	if(gravity_on)
@@ -569,8 +618,6 @@ void move_falcon(double time) // time is in sec
 
 	falcon_pos.x += delta_t * falcon_vel.x;
 	falcon_pos.z += delta_t * falcon_vel.z;
-	
-	falcon_pos = comet_pos;
 }
 
 void turn_falcon(double time)
@@ -604,6 +651,10 @@ void brake(double percent)
 	falcon_vel.z *= percent;
 }
 
+/****************************
+ * ANIMATIONS
+ ****************************/
+
 void start_anim(anim_type type)
 {
 	anim_start_time = GetTime();
@@ -628,7 +679,6 @@ void end_anim()
 	falcon_eye_angle = 0.0;
 	ref_eye_pos = &falcon_pos;
 	lock_controls = false;
-	pause_planets = false;
 	cockpit_view = was_in_cockpit_view;
 	pause_planets = was_paused;
 	animation = NO_ANIM;
@@ -716,27 +766,40 @@ void animate_eye_rotation()
  * CAMERA FUNCTIONS
  ***********************************/
 
-// function for collision detection, but not working or used right now
+double calc_adjustment_height(point3 pos, point3 body_pos, double body_rad, double buffer)
+{
+	double adjust = 0;
+	
+	double sqrt2 = 1.414;
+	double delta_x = body_pos.x - pos.x;
+	double delta_z = body_pos.z - pos.z;
+	double xz_dist = sqrt(delta_x*delta_x + delta_z*delta_z);
+	
+	if(xz_dist < sqrt2 * (body_rad+buffer))
+	{
+		adjust = (sqrt2 * body_rad) - xz_dist + buffer;
+	}
+	
+	return adjust;
+}
+
 double adjust_eye_height(double x, double y, double z)
 {
-	/*
 	point3 pos = {x, y, z};
 	double buffer = 1;
 	
-	double adjust = adjustment_height(pos, sun_pos, SUN_RAD, buffer);	
+	double adjust = calc_adjustment_height(pos, sun_pos, SUN_RAD, buffer);	
 	if(adjust > 0)
 		return adjust + y;
 		
-	adjust = adjustment_height(pos, earth_pos, EARTH_RAD, buffer);	
+	adjust = calc_adjustment_height(pos, earth_pos, EARTH_RAD, buffer);	
 	if(adjust > 0)
 		return adjust + y;
 		
-	adjust = adjustment_height(pos, moon_pos, MOON_RAD, buffer);
+	adjust = calc_adjustment_height(pos, moon_pos, MOON_RAD, buffer);
 	if(adjust > 0)
 		return adjust + y;
 		
-	return y;
-	*/
 	return y;
 }
 
@@ -779,6 +842,7 @@ void set_eye_position()
 		Cz = ref_eye_pos->z - VIEW_DIST_AHEAD * KUTILS_SIN(falcon_dir);
 	}
 
+	// falcon_eye_angle is the angle from falcon_dir that the camera is pointing
 	if(falcon_eye_angle != 0)
 	{
 		point2 target = {Ex, Ez};
@@ -795,7 +859,7 @@ void set_eye_position()
 		Cz = result.y;
 	}
 
-	gluLookAt(Ex,Ey,Ez , Cx,Cy,Cz, Ux,Uy,Uz);	
+	gluLookAt(Ex,Ey,Ez, Cx,Cy,Cz, Ux,Uy,Uz);	
 }
 
 /******************************
@@ -822,7 +886,22 @@ void display()
 
 	set_lighting();
 
-	draw_scene();		
+	draw_scene();
+
+	// Display game state
+	if(animation == NO_ANIM)
+	{
+		if(!gravity_on)
+		{
+			glWindowPos2i(5,5);
+			Print("Gravity off\n");
+		}
+		if(pause_planets)
+		{
+			glWindowPos2i(5,25);
+			Print("Planet motion paused\n");
+		}		
+	}
 	
 	//  Render the scene and make it visible
 	glFlush();
@@ -987,7 +1066,6 @@ void key(unsigned char ch,int x,int y)
 	// Enter: jump
 	else if (ch == 13 && !lock_controls)
 	{
-		pause_planets = true;
 		start_anim(JUMP);
 	}
 	//  Toggle orbiting planets
@@ -1050,8 +1128,6 @@ void key(unsigned char ch,int x,int y)
 	shinyvec[0] = shininess<0 ? 0 : pow(2.0,shininess);
 	//  Reproject
 	Project(fov,asp,dim);
-	//  Animate if requested
-	//glutIdleFunc(move?idle:NULL);
 	//  Tell GLUT it is necessary to redisplay the scene
 	glutPostRedisplay();
 }
@@ -1099,6 +1175,7 @@ int main(int argc,char* argv[])
 	}
 	stars_tex = LoadTexBMP((char*)"./texs/tex_stars.bmp");
 	cockpit_tex = LoadTexBMP((char*)"./texs/tex_cockpit.bmp");
+	instr_tex = LoadTexBMP((char*)"./texs/tex_instrument.bmp");
 	// perform some initializations
 	Initialize_Thrust();
 	last_time = glutGet(GLUT_ELAPSED_TIME)/1000.0;
