@@ -179,6 +179,9 @@ point3 norms[SHEET_PTS][SHEET_PTS];
 extern point3 no_translation;
 extern point4 no_rotation;
 extern point3 no_scale;
+	
+GLfloat starsEmissiveMaterial[] = {1, 1, 1};
+GLfloat noEmissiveMaterial[] = {0.0, 0.0, 0.0};
 
 /******************************
  * HELPER FUNCTIONS
@@ -365,6 +368,7 @@ static void Sky(double D, point3 trans)
 	glPushMatrix();
 	Transform(trans, no_rotation, no_scale);
 
+	glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, starsEmissiveMaterial);
 	glColor3f(1,1,1);
 	glEnable(GL_TEXTURE_2D);
 
@@ -406,6 +410,7 @@ static void Sky(double D, point3 trans)
 	glEnd();
 
 	glDisable(GL_TEXTURE_2D);
+	glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, noEmissiveMaterial);
 
 	glPopMatrix();
 }
