@@ -26,7 +26,7 @@ void Draw_sheet(point3 pts[SHEET_PTS][SHEET_PTS], point3 norms[SHEET_PTS][SHEET_
 			{
 				// draw the sheet
 				glEnable(GL_POLYGON_OFFSET_FILL);
-				glPolygonOffset(1,-1);
+				glPolygonOffset(4,0);
 				glColor3d(SHEET_COLOR,SHEET_COLOR,SHEET_COLOR);
 				glBegin(GL_POLYGON);
 				

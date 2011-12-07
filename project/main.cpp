@@ -123,8 +123,8 @@ unsigned int instr_tex;
 bool pause_planets = false;
 bool gravity_on = true;
 // falcon state
-//point3 falcon_pos = {-2,FALCON_HEIGHT,-2};
-point3 falcon_pos = {-10,FALCON_HEIGHT,-10};
+point3 falcon_pos = {-2,FALCON_HEIGHT,-2};
+//point3 falcon_pos = {-10,FALCON_HEIGHT,-10};
 point3 falcon_vel = {0.0,0.0,0.0};
 double falcon_dir = 270; // angle from the x-axis that the falcon is pointing
 double eye_height = 0.05;
@@ -186,29 +186,6 @@ extern GLfloat blackEmissiveMaterial[];
 /******************************
  * HELPER FUNCTIONS
  ******************************/
- 
- /* Multiply the current ModelView-Matrix with a shadow-projetion matrix.
- *
- * L is the position of the light source
- * E is a point within the plane on which the shadow is to be projected.  
- * N is the normal vector of the plane.
- *
- * Everything that is drawn after this call is "squashed" down to the plane.
- */
-void ShadowProjection(float L[4], float E[4], float N[4])
-{
-	float mat[16];
-	float e = E[0]*N[0] + E[1]*N[1] + E[2]*N[2];
-	float l = L[0]*N[0] + L[1]*N[1] + L[2]*N[2];
-	float c = e - l;
-	//  Create the matrix.
-	mat[0] = N[0]*L[0]+c; mat[4] = N[1]*L[0];   mat[8]  = N[2]*L[0];   mat[12] = -e*L[0];
-	mat[1] = N[0]*L[1];   mat[5] = N[1]*L[1]+c; mat[9]  = N[2]*L[1];   mat[13] = -e*L[1];
-	mat[2] = N[0]*L[2];   mat[6] = N[1]*L[2];   mat[10] = N[2]*L[2]+c; mat[14] = -e*L[2];
-	mat[3] = N[0];        mat[7] = N[1];        mat[11] = N[2];        mat[15] = -l;
-	//  Multiply modelview matrix
-	glMultMatrixf(mat);
-}
  
 void rotate_about_point(point2 target, point2 reference, double angle, point2 *result)
 {
@@ -458,10 +435,11 @@ void draw_pointer()
 	glPopMatrix();
 }
 
-void draw_scene()
+void draw_falcon(point3 *trans)
 {
 	// draw the falcon
 	point3 falcon_trans = {falcon_pos.x, falcon_pos.y, falcon_pos.z};
+	*trans = falcon_trans;
 	point4 falcon_base_rot = {0, 1, 0, falcon_dir};
 	point4 falcon_flip_rot = {0, 0, 1, falcon_flip_angle}; // only flip about the falcon's z-axis
 	point4 falcon_roll_rot = {1, 0, 0, falcon_roll_angle}; // only roll about the falcon's x-axis
@@ -478,6 +456,43 @@ void draw_scene()
 	tbox.bll = ManualTransformAboutY(falcon_trans, falcon_rots[0], falcon_scale, tbox.bll);
 	tbox.blr = ManualTransformAboutY(falcon_trans, falcon_rots[0], falcon_scale, tbox.blr);
 	tbox.bur = ManualTransformAboutY(falcon_trans, falcon_rots[0], falcon_scale, tbox.bur);
+}
+
+void draw_planets(point3 *earth_trans, point3 *moon_trans, point3 *jupiter_trans)
+{
+	// draw the earth
+	earth_pos.x = -ORBIT_RAD_EARTH*KUTILS_COS(orbit_angle_earth);
+	earth_pos.y = EARTH_HEIGHT;
+	earth_pos.z = ORBIT_RAD_EARTH*KUTILS_SIN(orbit_angle_earth);
+	*earth_trans = earth_pos;
+	point4 earth_rots = {0,1,0,rotate_angle_earth};
+	point3 earth_scale = {EARTH_RAD,EARTH_RAD,EARTH_RAD};
+	Draw_Earth(*earth_trans, earth_rots, earth_scale);
+	
+	// draw the moon
+	moon_pos.x = -ORBIT_RAD_MOON*KUTILS_COS(orbit_angle_moon);
+	moon_pos.y = MOON_HEIGHT;
+	moon_pos.z = ORBIT_RAD_MOON*KUTILS_SIN(orbit_angle_moon);
+	*moon_trans = moon_pos;
+	point4 moon_rots = {0,1,0,orbit_angle_moon};
+	point3 moon_scale = {MOON_RAD,MOON_RAD,MOON_RAD};
+	Draw_Moon(*earth_trans, *moon_trans, moon_rots, moon_scale);
+	
+	// draw jupiter
+	jupiter_pos.x = -ORBIT_RAD_JUPITER*KUTILS_COS(orbit_angle_jupiter);
+	jupiter_pos.y = JUPITER_HEIGHT;
+	jupiter_pos.z = ORBIT_RAD_JUPITER*KUTILS_SIN(orbit_angle_jupiter);
+	*jupiter_trans = jupiter_pos;
+	point4 jupiter_rots = {0,1,0,rotate_angle_jupiter};
+	point3 jupiter_scale = {JUPITER_RAD,JUPITER_RAD,JUPITER_RAD};
+	Draw_Jupiter(*jupiter_trans, jupiter_rots, jupiter_scale);
+}
+
+void draw_scene()
+{
+	point3 falcon_trans, earth_trans, moon_trans, jupiter_trans;
+	
+	draw_falcon(&falcon_trans);
 	
 	// draw pointer to sun
 	if(show_pointer)
@@ -494,32 +509,7 @@ void draw_scene()
 	point3 sun_scale = {SUN_RAD,SUN_RAD,SUN_RAD};
 	Draw_Sun(sun_trans, sun_rots, sun_scale);	
 	
-	// draw the earth
-	earth_pos.x = -ORBIT_RAD_EARTH*KUTILS_COS(orbit_angle_earth);
-	earth_pos.y = EARTH_HEIGHT;
-	earth_pos.z = ORBIT_RAD_EARTH*KUTILS_SIN(orbit_angle_earth);
-	point3 earth_trans = earth_pos;
-	point4 earth_rots = {0,1,0,rotate_angle_earth};
-	point3 earth_scale = {EARTH_RAD,EARTH_RAD,EARTH_RAD};
-	Draw_Earth(earth_trans, earth_rots, earth_scale);
-	
-	// draw the moon
-	moon_pos.x = -ORBIT_RAD_MOON*KUTILS_COS(orbit_angle_moon);
-	moon_pos.y = MOON_HEIGHT;
-	moon_pos.z = ORBIT_RAD_MOON*KUTILS_SIN(orbit_angle_moon);
-	point3 moon_trans = moon_pos;
-	point4 moon_rots = {0,1,0,orbit_angle_moon};
-	point3 moon_scale = {MOON_RAD,MOON_RAD,MOON_RAD};
-	Draw_Moon(earth_trans, moon_trans, moon_rots, moon_scale);
-	
-	// draw jupiter
-	jupiter_pos.x = -ORBIT_RAD_JUPITER*KUTILS_COS(orbit_angle_jupiter);
-	jupiter_pos.y = JUPITER_HEIGHT;
-	jupiter_pos.z = ORBIT_RAD_JUPITER*KUTILS_SIN(orbit_angle_jupiter);
-	point3 jupiter_trans = jupiter_pos;
-	point4 jupiter_rots = {0,1,0,rotate_angle_jupiter};
-	point3 jupiter_scale = {JUPITER_RAD,JUPITER_RAD,JUPITER_RAD};
-	Draw_Jupiter(jupiter_trans, jupiter_rots, jupiter_scale);
+	draw_planets(&earth_trans, &moon_trans, &jupiter_trans);
 	
 	// draw the sheet
 	Calculate_sheet_points(pts, falcon_pos);
@@ -917,7 +907,7 @@ void display()
 	set_lighting();
 
 	draw_scene();
-
+	
 	// Display game state
 	if(animation == NO_ANIM)
 	{
@@ -1186,7 +1176,7 @@ int main(int argc,char* argv[])
 	//  Request double buffered, true color window with Z buffering at 600x600
 	glutInitDisplayMode(GLUT_RGB | GLUT_DEPTH | GLUT_DOUBLE);
 	glutInitWindowSize(600,600);
-	glutCreateWindow("Andrew Kessel - HW 7 - Textures");
+	glutCreateWindow("Andrew Kessel - HW 10 - Final Project");
 	//  Set callbacks
 	glutDisplayFunc(display);
 	glutReshapeFunc(reshape);
@@ -1210,6 +1200,8 @@ int main(int argc,char* argv[])
 	// perform some initializations
 	Initialize_Thrust();
 	last_time = glutGet(GLUT_ELAPSED_TIME)/1000.0;
+	//  Initialize texture map
+	//InitMap();
 	//  Pass control to GLUT so it can interact with the user
 	glutMainLoop();
 	return 0;
