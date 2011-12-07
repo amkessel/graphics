@@ -11,7 +11,7 @@ point4 no_rotation = {0,0,0,0};
 point3 no_scale = {1,1,1};
 	
 GLfloat sunEmissiveMaterial[] = {1, 1, 0.5};
-GLfloat blckEmissiveMaterial[] = {0.0, 0.0, 0.0};
+extern GLfloat blackEmissiveMaterial[];
 
 unsigned int planet_tex[NUM_PLANET_TEXS];
 char *planet_tex_names[] = { (char*)"./texs/tex_sun.bmp",
@@ -95,7 +95,7 @@ void Draw_Sun(point3 translation, point4 rotation, point3 scale)
 	
 	glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, sunEmissiveMaterial);
 	draw_planet(SUN_TEX, true);
-	glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, blckEmissiveMaterial);
+	glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, blackEmissiveMaterial);
 	
 	// reset the old transformation
 	glPopMatrix();
@@ -281,7 +281,7 @@ void Draw_Corona(point3 translation, point4 rotation, point3 scale)
 	
 	glDepthMask(1);
 	glDisable(GL_BLEND);
-	glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, blckEmissiveMaterial);
+	glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, blackEmissiveMaterial);
 
 	// reset the old transformation
 	glPopMatrix();
